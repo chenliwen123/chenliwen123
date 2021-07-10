@@ -11,7 +11,6 @@
   <img src="https://profile-counter.glitch.me/reng99/count.svg" />
 </p> -->
 
-<p align="center">More about Me: Click <a href="https://jimmyarea.com/">jimmyarea.com</a></p>
 
 ---
 
