@@ -1,0 +1,28 @@
+{
+  "name": "chenliwen123",
+  "version": "1.0.0",
+  "description": "陈立文的多主题个人主页，基于 React + Vite + Less 构建",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@react-three/fiber": "^9.6.1",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "three": "^0.184.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react-swc": "^4.3.0",
+    "less": "^4.6.4",
+    "vite": "^8.0.12"
+  }
+}
