@@ -4,9 +4,10 @@ import { AnimationMixer, Box3, MathUtils, Vector3 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 const CHARACTER_MODEL_URL = '/models/poly/poly.glb';
-const CHARACTER_FLOOR_Y = -2.82;
-const CHARACTER_TARGET_HEIGHT = 4.02;
-const CHARACTER_FLOAT_AMPLITUDE = 0.045;
+const CHARACTER_FLOOR_Y = -3.02;
+const CHARACTER_TARGET_HEIGHT = 3.52;
+const CHARACTER_FLOAT_AMPLITUDE = 0.07;
+const CHARACTER_LOOK_AT_Y = -1.2;
 
 function CharacterModel() {
   const group = useRef(null);
@@ -85,7 +86,7 @@ function CharacterScene() {
       dpr={[1, 1.5]}
       gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
       onCreated={({ camera }) => {
-        camera.lookAt(0, -0.48, 0);
+        camera.lookAt(0, CHARACTER_LOOK_AT_Y, 0);
       }}
     >
       <ambientLight intensity={1.5} color="#fff0de" />

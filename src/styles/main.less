@@ -522,6 +522,7 @@ body:has(.theme-valorant) {
 
 .character-stage {
   position: relative;
+  height: 376px;
   min-height: 376px;
   margin: 0 18px;
   overflow: hidden;
@@ -584,18 +585,18 @@ body:has(.theme-valorant) {
 
 .character-hud {
   position: absolute;
-  left: 16px;
-  right: 16px;
+  left: 10px;
+  right: 10px;
   z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   pointer-events: none;
 }
 
-.character-hud-top { top: 16px; }
-.character-hud-bottom { bottom: 16px; }
+.character-hud-top { top: 10px; }
+.character-hud-bottom { bottom: 10px; }
 
 .character-hud span,
 .character-meta-card span {
@@ -607,14 +608,18 @@ body:has(.theme-valorant) {
 }
 
 .character-hud span {
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-radius: 999px;
   border: 1px solid rgba(255, 223, 194, 0.12);
   background: rgba(15, 10, 13, 0.42);
   backdrop-filter: blur(10px);
+  font-size: 0.68rem;
 }
 
 .character-canvas {
+  position: absolute !important;
+  inset: 0;
+  z-index: 1;
   display: block;
   width: 100% !important;
   height: 100% !important;
@@ -647,7 +652,7 @@ body:has(.theme-valorant) {
     rgba(255, 255, 255, 0.04);
 }
 
-.music-card { display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: center; gap: 22px; }
+.music-card { position: relative; display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: center; gap: 22px; }
 .music-art { display: grid; place-items: center; }
 .record {
   position: relative; width: 108px; height: 108px; border-radius: 50%;
@@ -683,6 +688,7 @@ body:has(.theme-valorant) {
     radial-gradient(circle at top right, var(--music-dock-highlight), transparent 34%),
     var(--music-dock-bg);
   backdrop-filter: blur(18px);
+  overflow: hidden;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
   transform-origin: bottom right;
   transition: transform 220ms ease, box-shadow 220ms ease, background 220ms ease;
@@ -696,6 +702,11 @@ body:has(.theme-valorant) {
 .music-dock .record {
   width: 78px;
   height: 78px;
+}
+
+.music-dock .music-copy {
+  min-width: 0;
+  padding-right: 34px;
 }
 
 .music-dock .record-core {
@@ -724,6 +735,70 @@ body:has(.theme-valorant) {
 
 .music-dock .music-controls {
   gap: 10px;
+}
+
+.music-collapse-toggle {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 3;
+  width: 38px;
+  min-width: 38px;
+  min-height: 38px;
+}
+
+.music-collapse-toggle:hover {
+  transform: none;
+}
+
+.music-collapsed-copy {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.music-collapsed-copy .music-kicker {
+  margin: 0;
+  font-size: 0.64rem;
+}
+
+.music-collapsed-copy strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1rem;
+}
+
+.music-dock.is-collapsed {
+  width: min(238px, calc(100vw - 32px));
+  padding: 16px 58px 16px 16px;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.music-dock.is-collapsed:hover {
+  transform: none;
+}
+
+.music-dock.is-collapsed .music-collapse-toggle {
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+}
+
+.music-dock.is-collapsed .music-collapse-toggle:hover {
+  transform: translateY(-50%);
+}
+
+.music-dock.is-collapsed .record {
+  width: 52px;
+  height: 52px;
+}
+
+.music-dock.is-collapsed .record-core {
+  inset: 20px;
 }
 
 .music-bars { display: inline-flex; align-items: flex-end; gap: 5px; height: 28px; }
@@ -805,7 +880,7 @@ body:has(.theme-valorant) {
   .header-chrome { top: 10px; }
   .contact-card { flex-direction: column; align-items: flex-start; }
   .music-dock.music-card { width: min(360px, calc(100vw - 28px)); }
-  .character-stage { min-height: 352px; }
+  .character-stage { height: 352px; min-height: 352px; }
 }
 
 @media (max-width: 720px) {
@@ -826,11 +901,16 @@ body:has(.theme-valorant) {
     width: auto;
     grid-template-columns: 1fr;
   }
+  .music-dock.is-collapsed {
+    width: auto;
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
   .record { width: 92px; height: 92px; }
   .record-core { inset: 35px; }
   .character-copy { padding: 20px 20px 12px; }
   .character-credit { font-size: 0.66rem; }
   .character-stage {
+    height: 316px;
     min-height: 316px;
     margin: 0 14px;
     border-radius: 22px;

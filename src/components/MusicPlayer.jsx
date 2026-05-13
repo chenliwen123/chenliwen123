@@ -31,6 +31,12 @@ function ControlIcon({ name }) {
         <path d="M15.1 9.14a.75.75 0 0 1 1.06 0L18 10.98l1.84-1.84a.75.75 0 1 1 1.06 1.06L19.06 12l1.84 1.84a.75.75 0 0 1-1.06 1.06L18 13.06l-1.84 1.84a.75.75 0 1 1-1.06-1.06L16.94 12l-1.84-1.8a.75.75 0 0 1 0-1.06Z" />
       </>
     ),
+    collapse: (
+      <path d="M7.72 14.78a.75.75 0 0 1 0-1.06l3.75-3.75a.75.75 0 0 1 1.06 0l3.75 3.75a.75.75 0 1 1-1.06 1.06L12 11.56l-3.22 3.22a.75.75 0 0 1-1.06 0Z" />
+    ),
+    expand: (
+      <path d="M16.28 9.22a.75.75 0 0 1 0 1.06l-3.75 3.75a.75.75 0 0 1-1.06 0L7.72 10.28a.75.75 0 0 1 1.06-1.06L12 12.44l3.22-3.22a.75.75 0 0 1 1.06 0Z" />
+    ),
   };
 
   return (
@@ -45,6 +51,7 @@ export default function MusicPlayer({ tracks, className = '' }) {
   const [currentTrackId, setCurrentTrackId] = useState(tracks[0]?.id ?? null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [status, setStatus] = useState('点击按钮开启页面音乐');
 
   useEffect(() => {
@@ -148,78 +155,113 @@ export default function MusicPlayer({ tracks, className = '' }) {
     setStatus(audio.muted ? '已静音播放' : '已恢复声音');
   };
 
+  const toggleCollapsed = () => {
+    setIsCollapsed((value) => !value);
+  };
+
+  if (!currentTrack) {
+    return null;
+  }
+
   return (
     <article
-      className={`music-card ${className}`.trim()}
+      className={`music-card ${className} ${isCollapsed ? 'is-collapsed' : ''}`.trim()}
       data-audio-state={isPlaying ? 'playing' : 'idle'}
     >
-      <div className="music-art" aria-hidden="true">
-        <div className="record">
-          <div className="record-core" />
-        </div>
-      </div>
+      <button
+        className="button button-music button-music-ghost icon-button music-collapse-toggle"
+        type="button"
+        onClick={toggleCollapsed}
+        aria-label={isCollapsed ? '展开播放器' : '收起播放器'}
+        title={isCollapsed ? '展开播放器' : '收起播放器'}
+      >
+        <ControlIcon name={isCollapsed ? 'expand' : 'collapse'} />
+      </button>
 
-      <div className="music-copy">
-        <p className="music-kicker">Independent Music Module</p>
-        <h2>{currentTrack.title}</h2>
-        <p className="music-meta">{formatTrackLabel(currentTrack, currentIndex, tracks.length)}</p>
-        <p className="music-status">{status}</p>
-
-        <div className="music-visualizer">
-          <div className="music-bars" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-            <span />
-            <span />
+      {isCollapsed ? (
+        <>
+          <div className="music-art" aria-hidden="true">
+            <div className="record">
+              <div className="record-core" />
+            </div>
           </div>
-        </div>
 
-        <div className="music-controls music-controls-primary">
-          <button
-            className="button button-music icon-button"
-            type="button"
-            onClick={() => changeTrack(-1)}
-            disabled={!canChangeTrack}
-            aria-label="上一曲"
-            title="上一曲"
-          >
-            <ControlIcon name="previous" />
-          </button>
-          <button
-            className="button button-music button-music-strong icon-button icon-button-strong"
-            type="button"
-            onClick={togglePlay}
-            aria-label={isPlaying ? '暂停音乐' : '播放音乐'}
-            title={isPlaying ? '暂停音乐' : '播放音乐'}
-          >
-            <ControlIcon name={isPlaying ? 'pause' : 'play'} />
-          </button>
-          <button
-            className="button button-music icon-button"
-            type="button"
-            onClick={() => changeTrack(1)}
-            disabled={!canChangeTrack}
-            aria-label="下一曲"
-            title="下一曲"
-          >
-            <ControlIcon name="next" />
-          </button>
-          <button
-            className="button button-music button-music-ghost icon-button"
-            type="button"
-            onClick={toggleMute}
-            aria-label={isMuted ? '取消静音' : '静音'}
-            title={isMuted ? '取消静音' : '静音'}
-          >
-            <ControlIcon name={isMuted ? 'muted' : 'volume'} />
-          </button>
-        </div>
+          <div className="music-collapsed-copy">
+            <p className="music-kicker">Music Module</p>
+            <strong>{currentTrack.title}</strong>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="music-art" aria-hidden="true">
+            <div className="record">
+              <div className="record-core" />
+            </div>
+          </div>
 
-        <audio ref={audioRef} preload="metadata">
-          <source src={currentTrack.src} type={currentTrack.type === 'video' ? 'video/mp4' : 'audio/mpeg'} />
-        </audio>
-      </div>
+          <div className="music-copy">
+            <p className="music-kicker">Independent Music Module</p>
+            <h2>{currentTrack.title}</h2>
+            <p className="music-meta">{formatTrackLabel(currentTrack, currentIndex, tracks.length)}</p>
+            <p className="music-status">{status}</p>
+
+            <div className="music-visualizer">
+              <div className="music-bars" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
+            </div>
+
+            <div className="music-controls music-controls-primary">
+              <button
+                className="button button-music icon-button"
+                type="button"
+                onClick={() => changeTrack(-1)}
+                disabled={!canChangeTrack}
+                aria-label="上一曲"
+                title="上一曲"
+              >
+                <ControlIcon name="previous" />
+              </button>
+              <button
+                className="button button-music button-music-strong icon-button icon-button-strong"
+                type="button"
+                onClick={togglePlay}
+                aria-label={isPlaying ? '暂停音乐' : '播放音乐'}
+                title={isPlaying ? '暂停音乐' : '播放音乐'}
+              >
+                <ControlIcon name={isPlaying ? 'pause' : 'play'} />
+              </button>
+              <button
+                className="button button-music icon-button"
+                type="button"
+                onClick={() => changeTrack(1)}
+                disabled={!canChangeTrack}
+                aria-label="下一曲"
+                title="下一曲"
+              >
+                <ControlIcon name="next" />
+              </button>
+              <button
+                className="button button-music button-music-ghost icon-button"
+                type="button"
+                onClick={toggleMute}
+                aria-label={isMuted ? '取消静音' : '静音'}
+                title={isMuted ? '取消静音' : '静音'}
+              >
+                <ControlIcon name={isMuted ? 'muted' : 'volume'} />
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      <audio ref={audioRef} preload="metadata">
+        <source src={currentTrack.src} type={currentTrack.type === 'video' ? 'video/mp4' : 'audio/mpeg'} />
+      </audio>
     </article>
   );
 }
