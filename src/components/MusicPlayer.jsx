@@ -46,7 +46,12 @@ function ControlIcon({ name }) {
   );
 }
 
-export default function MusicPlayer({ tracks, className = '' }) {
+export default function MusicPlayer({
+  tracks,
+  className = '',
+  isThemeLinked = true,
+  onToggleThemeLinked,
+}) {
   const audioRef = useRef(null);
   const [currentTrackId, setCurrentTrackId] = useState(tracks[0]?.id ?? null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -200,7 +205,20 @@ export default function MusicPlayer({ tracks, className = '' }) {
           </div>
 
           <div className="music-copy">
-            <p className="music-kicker">Independent Music Module</p>
+            <div className="music-copy-top">
+              <p className="music-kicker">Independent Music Module</p>
+              {onToggleThemeLinked ? (
+                <button
+                  className={isThemeLinked ? 'music-mode-toggle is-active' : 'music-mode-toggle'}
+                  type="button"
+                  onClick={onToggleThemeLinked}
+                  aria-pressed={isThemeLinked}
+                  title={isThemeLinked ? '关闭主题强关联音乐' : '开启主题强关联音乐'}
+                >
+                  {isThemeLinked ? '主题联动开' : '自由播放'}
+                </button>
+              ) : null}
+            </div>
             <h2>{currentTrack.title}</h2>
             <p className="music-meta">{formatTrackLabel(currentTrack, currentIndex, tracks.length)}</p>
             <p className="music-status">{status}</p>

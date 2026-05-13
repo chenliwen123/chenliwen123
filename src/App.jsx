@@ -1,4 +1,4 @@
-import { Suspense, lazy, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import MusicPlayer from './components/MusicPlayer';
 import RevealSection from './components/RevealSection';
 import lolTrack from '../assets/lol/lol-theme.mp3';
@@ -223,12 +223,12 @@ const topNav = [
 ];
 
 const themeOptions = [
-  { key: 'default', label: '默认主页' },
-  { key: 'lol', label: '英雄联盟主题' },
-  { key: 'delta', label: '三角洲主题' },
-  { key: 'cs2', label: 'CS2 主题' },
-  { key: 'overwatch', label: '守望先锋主题' },
-  { key: 'valorant', label: '瓦罗兰特主题' },
+  { key: 'default', label: '主页' },
+  { key: 'lol', label: '英雄联盟' },
+  { key: 'delta', label: '三角洲' },
+  { key: 'cs2', label: 'CS2' },
+  { key: 'overwatch', label: '守望先锋' },
+  { key: 'valorant', label: '瓦罗兰特' },
 ];
 
 const trackLibrary = [
@@ -250,6 +250,102 @@ const themeTrackMap = {
   valorant: [{ trackId: 'valorant-theme' }],
 };
 
+const themeIntroMap = {
+  lol: {
+    src: '/theme-intros/lol-intro.mp4',
+    kicker: 'RIFT HIGHLIGHTS',
+    title: '峡谷高光回放',
+    description: '切入主题前，先用一段精彩操作把情绪拉满。',
+  },
+  delta: {
+    src: '/theme-intros/delta-intro.mp4',
+    kicker: 'TACTICAL ENTRY',
+    title: '战区部署集锦',
+    description: '先看推进、协同和正面作战的关键镜头，再进入主题页。',
+  },
+  cs2: {
+    src: '/theme-intros/cs2-intro.mp4',
+    kicker: 'SITE EXECUTION',
+    title: '残局与爆点操作',
+    description: '先用高光镜头建立竞技 FPS 的压迫感，再展开完整页面。',
+  },
+  overwatch: {
+    src: '/theme-intros/overwatch-intro.mp4',
+    kicker: 'HERO MOMENTS',
+    title: '英雄入场高能片段',
+    description: '开场先放一段英雄集锦，让主题切换更像角色登场。',
+  },
+  valorant: {
+    src: '/theme-intros/valorant-intro.mp4',
+    kicker: 'AGENT CLUTCH',
+    title: '特工关键击杀集锦',
+    description: '在进入页面之前，先看一段更利落的比赛片段。',
+  },
+};
+
+const themeMetricsMap = {
+  default: {
+    title: '这个主页目前最适合展示的核心数据。',
+    description: '默认主页先用“个人表达与内容完成度”的方式展示数据，后面切到游戏主题时再切成更具体的战绩指标。',
+    cards: [
+      { label: 'THEME COUNT', value: '05', note: '当前已接入的主题数量' },
+      { label: 'MOTION PASS', value: '18+', note: '页面里已落地的动效节点' },
+      { label: 'MODULES', value: '3', note: '角色、音乐、主题系统三块骨架' },
+      { label: 'EXPANDABLE', value: 'READY', note: '后续继续接更多主题不需要重写结构' },
+    ],
+  },
+  lol: {
+    title: '英雄联盟主题数据展示方向。',
+    description: '这里先用示意战绩结构做骨架，后续你可以直接替换成自己真实的赛季数据。',
+    cards: [
+      { label: 'KDA', value: '4.8', note: '最近 30 场排位综合表现' },
+      { label: 'DPM', value: '742', note: '分均伤害 / 团战输出能力' },
+      { label: 'KP', value: '69%', note: '参团率 / 团队影响力' },
+      { label: 'CS/MIN', value: '7.3', note: '分均补刀 / 对线节奏' },
+    ],
+  },
+  delta: {
+    title: '三角洲主题数据展示方向。',
+    description: '这类主题更适合放作战风格、推进效率和生存表现，信息感会更像战术简报。',
+    cards: [
+      { label: 'K/D', value: '2.1', note: '最近战局击杀生存比' },
+      { label: 'HEADSHOT', value: '31%', note: '爆头率 / 精准度' },
+      { label: 'EXTRACT', value: '68%', note: '撤离成功率 / 节奏判断' },
+      { label: 'SUPPORT', value: '5.4', note: '场均战术支援次数' },
+    ],
+  },
+  cs2: {
+    title: 'CS2 主题数据展示方向。',
+    description: '竞技 FPS 更适合用 ADR、KAST、首杀成功率这种能直接体现回合价值的指标。',
+    cards: [
+      { label: 'ADR', value: '86', note: '平均每回合伤害' },
+      { label: 'HEADSHOT', value: '48%', note: '爆头率 / 枪线质量' },
+      { label: 'KAST', value: '74%', note: '回合存活与贡献综合率' },
+      { label: 'ENTRY', value: '57%', note: '首杀成功率 / 进点效率' },
+    ],
+  },
+  overwatch: {
+    title: '守望先锋主题数据展示方向。',
+    description: '守望先锋更适合把团队参与、输出效率和关键技能命中拆开看，像人物面板一样展示。',
+    cards: [
+      { label: 'ELIMS / 10', value: '24.6', note: '每 10 分钟消灭数' },
+      { label: 'DMG / 10', value: '9,480', note: '每 10 分钟输出量' },
+      { label: 'DEATHS / 10', value: '7.9', note: '站位与容错能力' },
+      { label: 'SKILL HIT', value: '63%', note: '关键技能命中率' },
+    ],
+  },
+  valorant: {
+    title: '瓦罗兰特主题数据展示方向。',
+    description: '瓦更适合展示 ACS、首杀、残局和爆头率，整体会更像赛前数据面板。',
+    cards: [
+      { label: 'ACS', value: '252', note: '平均战斗评分' },
+      { label: 'KDA', value: '1.42', note: '击杀 / 助攻 / 存活表现' },
+      { label: 'FIRST BLOOD', value: '55%', note: '首杀成功率' },
+      { label: 'HEADSHOT', value: '31%', note: '爆头率 / 枪法稳定度' },
+    ],
+  },
+};
+
 function SpotlightCard({ theme }) {
   return (
     <article className="feature-card intro-card">
@@ -268,19 +364,103 @@ function SpotlightCard({ theme }) {
   );
 }
 
+function ThemeIntroOverlay({ intro, onClose }) {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div className="theme-intro-overlay" role="dialog" aria-modal="true" aria-label={`${intro.title} 主题入场视频`}>
+      <video
+        className="theme-intro-video"
+        src={intro.src}
+        autoPlay
+        muted
+        playsInline
+        preload="auto"
+        onEnded={onClose}
+        onError={onClose}
+      />
+      <div className="theme-intro-backdrop" aria-hidden="true" />
+      <div className="theme-intro-copy">
+        <p className="theme-intro-kicker">{intro.kicker}</p>
+        <h2>{intro.title}</h2>
+        <p>{intro.description}</p>
+      </div>
+      <button className="button button-secondary theme-intro-skip" type="button" onClick={onClose}>
+        跳过精彩操作
+      </button>
+    </div>
+  );
+}
+
 function App() {
   const [activeTheme, setActiveTheme] = useState('default');
+  const [isThemeMusicLinked, setIsThemeMusicLinked] = useState(true);
+  const [activeIntroKey, setActiveIntroKey] = useState(null);
   const theme = themes[activeTheme];
+  const themeMetrics = themeMetricsMap[activeTheme] ?? themeMetricsMap.default;
   const currentYear = useMemo(() => new Date().getFullYear(), []);
+  const allTracks = useMemo(() => trackLibrary.map((track) => ({ ...track })), []);
   const activeTracks = useMemo(
-    () => (
-      themeTrackMap[activeTheme] ?? []
-    ).map(({ trackId, ...overrides }) => {
-      const track = trackMap[trackId];
-      return track ? { ...track, ...overrides } : null;
-    }).filter(Boolean),
-    [activeTheme],
+    () => {
+      if (!isThemeMusicLinked) {
+        return allTracks;
+      }
+
+      return (
+        themeTrackMap[activeTheme] ?? []
+      ).map(({ trackId, ...overrides }) => {
+        const track = trackMap[trackId];
+        return track ? { ...track, ...overrides } : null;
+      }).filter(Boolean);
+    },
+    [activeTheme, allTracks, isThemeMusicLinked],
   );
+
+  useEffect(() => {
+    if (activeTheme === 'default') {
+      setActiveIntroKey(null);
+      return undefined;
+    }
+
+    const intro = themeIntroMap[activeTheme];
+    if (!intro?.src) {
+      setActiveIntroKey(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    fetch(intro.src, { method: 'HEAD' })
+      .then((response) => {
+        if (!cancelled && response.ok) {
+          setActiveIntroKey(activeTheme);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setActiveIntroKey(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTheme]);
 
   return (
     <div className={`app theme-${activeTheme}`}>
@@ -307,7 +487,7 @@ function App() {
             </div>
           </div>
 
-          <div className="topbar">
+          {/* <div className="topbar">
             <a className="brand" href="#home">CHENLIWEN</a>
             <nav className="nav">
               {topNav.map((item) => (
@@ -315,7 +495,7 @@ function App() {
               ))}
             </nav>
             <a className="mini-link" href="mailto:1410762621@qq.com">Say Hello</a>
-          </div>
+          </div> */}
         </header>
 
         <main className="theme-stage" key={activeTheme}>
@@ -376,6 +556,26 @@ function App() {
                 </div>
               </article>
             </aside>
+          </RevealSection>
+
+          <RevealSection className="stats theme-transition-panel" id="stats">
+            <div className="section-stack theme-enter-bottom theme-delay-1">
+              <div className="section-heading">
+                <p className="eyebrow">DATA</p>
+                <h2>{themeMetrics.title}</h2>
+                <p className="section-note">{themeMetrics.description}</p>
+              </div>
+
+              <div className="stats-grid">
+                {themeMetrics.cards.map((card) => (
+                  <article key={card.label} className="stats-card">
+                    <span>{card.label}</span>
+                    <strong>{card.value}</strong>
+                    <p>{card.note}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
           </RevealSection>
 
           <RevealSection className="story theme-transition-panel" id="about">
@@ -441,7 +641,19 @@ function App() {
         </footer>
       </div>
 
-      <MusicPlayer tracks={activeTracks} className="music-dock" />
+      <MusicPlayer
+        tracks={activeTracks}
+        className="music-dock"
+        isThemeLinked={isThemeMusicLinked}
+        onToggleThemeLinked={() => setIsThemeMusicLinked((value) => !value)}
+      />
+
+      {activeIntroKey && themeIntroMap[activeIntroKey] ? (
+        <ThemeIntroOverlay
+          intro={themeIntroMap[activeIntroKey]}
+          onClose={() => setActiveIntroKey(null)}
+        />
+      ) : null}
     </div>
   );
 }
