@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import MusicPlayer from './components/MusicPlayer';
 import RevealSection from './components/RevealSection';
+import { DataRing, GeoIndicator, MetaRingsGrid, ModeVisual, FloatingTagCloud, PulseStatus } from './components/AbstractVisuals';
 import lolTrack from '../assets/lol/lol-theme.mp3';
 import deltaTrack from '../assets/delta/delta-theme.mp3';
 import cs2Track from '../assets/cs2/cs2-theme.mp3';
@@ -514,18 +515,9 @@ function App() {
               </div>
 
               <ul className="hero-facts">
-                <li>
-                  <span className="fact-label">Base</span>
-                  <strong>Changchun, China</strong>
-                </li>
-                <li>
-                  <span className="fact-label">Theme</span>
-                  <strong>{theme.modeLabel}</strong>
-                </li>
-                <li>
-                  <span className="fact-label">Github</span>
-                  <strong>@chenliwen123</strong>
-                </li>
+                <GeoIndicator label="Base" value="Changchun, China" icon="◈" />
+                <GeoIndicator label="Theme" value={theme.modeLabel} icon="◆" />
+                <GeoIndicator label="Github" value="@chenliwen123" icon="◉" />
               </ul>
             </div>
 
@@ -546,14 +538,7 @@ function App() {
                 <span className="card-tag">MODE</span>
                 <h2>{theme.modeCardTitle}</h2>
                 <p>{theme.modeCardDesc}</p>
-                <div className="card-grid">
-                  {theme.modeCardMeta.map(([label, value]) => (
-                    <div key={label}>
-                      <span>{label}</span>
-                      <strong>{value}</strong>
-                    </div>
-                  ))}
-                </div>
+                <ModeVisual meta={theme.modeCardMeta} />
               </article>
             </aside>
           </RevealSection>
@@ -567,12 +552,14 @@ function App() {
               </div>
 
               <div className="stats-grid">
-                {themeMetrics.cards.map((card) => (
-                  <article key={card.label} className="stats-card">
-                    <span>{card.label}</span>
-                    <strong>{card.value}</strong>
-                    <p>{card.note}</p>
-                  </article>
+                {themeMetrics.cards.map((card, i) => (
+                  <DataRing
+                    key={card.label}
+                    label={card.label}
+                    value={card.value}
+                    note={card.note}
+                    size={100}
+                  />
                 ))}
               </div>
             </div>
@@ -614,11 +601,7 @@ function App() {
                 ))}
               </div>
 
-              <div className="tag-list" aria-label="关注标签">
-                {theme.tags.map((tag) => (
-                  <span key={tag}>{tag}</span>
-                ))}
-              </div>
+              <FloatingTagCloud tags={theme.tags} />
             </div>
           </RevealSection>
 

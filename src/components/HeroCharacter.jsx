@@ -2,6 +2,7 @@ import { Suspense, useEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { AnimationMixer, Box3, MathUtils, Vector3 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MetaRingsGrid } from './AbstractVisuals';
 
 const CHARACTER_MODEL_URL = '/models/poly/poly.glb';
 const CHARACTER_FLOOR_Y = -3.02;
@@ -137,14 +138,7 @@ export default function HeroCharacter({ title, description, meta }) {
         <CharacterScene />
       </div>
 
-      <div className="character-meta-grid">
-        {meta.map(([label, value]) => (
-          <div key={label} className="character-meta-card">
-            <span>{label}</span>
-            <strong>{value}</strong>
-          </div>
-        ))}
-      </div>
+      <MetaRingsGrid items={meta} />
     </article>
   );
 }

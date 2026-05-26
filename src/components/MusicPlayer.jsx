@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { PulseStatus } from './AbstractVisuals';
 
 function formatTrackLabel(track, index, total) {
   return `${String(index + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')} · ${track.subtitle}`;
@@ -221,7 +222,7 @@ export default function MusicPlayer({
             </div>
             <h2>{currentTrack.title}</h2>
             <p className="music-meta">{formatTrackLabel(currentTrack, currentIndex, tracks.length)}</p>
-            <p className="music-status">{status}</p>
+            <PulseStatus status={status} isPlaying={isPlaying} />
 
             <div className="music-visualizer">
               <div className="music-bars" aria-hidden="true">
