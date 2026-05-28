@@ -1,7 +1,6 @@
 .DS_Store
 node_modules
 /.build_cache
-/dist
 
 
 # local env files
