@@ -1,7 +1,7 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import MusicPlayer from './components/MusicPlayer';
 import RevealSection from './components/RevealSection';
-import { DataRing, GeoIndicator, MetaRingsGrid, ModeVisual, FloatingTagCloud, PulseStatus } from './components/AbstractVisuals';
+import { DataRing, GeoIndicator, ModeVisual, FloatingTagCloud } from './components/AbstractVisuals';
 import lolTrack from '../assets/lol/lol-theme.mp3';
 import deltaTrack from '../assets/delta/delta-theme.mp3';
 import cs2Track from '../assets/cs2/cs2-theme.mp3';
@@ -217,12 +217,6 @@ const themes = {
   },
 };
 
-const topNav = [
-  { href: '#about', label: '关于' },
-  { href: '#focus', label: '方向' },
-  { href: '#contact', label: '联系' },
-];
-
 const themeOptions = [
   { key: 'default', label: '主页' },
   { key: 'lol', label: '英雄联盟' },
@@ -408,12 +402,57 @@ function ThemeIntroOverlay({ intro, onClose }) {
   );
 }
 
+function useDeferredHeroCharacter(isEnabled) {
+  const [canRenderCharacter, setCanRenderCharacter] = useState(false);
+
+  useEffect(() => {
+    if (!isEnabled || canRenderCharacter) {
+      return undefined;
+    }
+
+    if (typeof window === 'undefined') {
+      setCanRenderCharacter(true);
+      return undefined;
+    }
+
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const connection = navigator.connection ?? navigator.mozConnection ?? navigator.webkitConnection;
+
+    if (prefersReducedMotion || connection?.saveData) {
+      return undefined;
+    }
+
+    let idleId;
+    let timeoutId;
+    const renderCharacter = () => setCanRenderCharacter(true);
+
+    if ('requestIdleCallback' in window) {
+      idleId = window.requestIdleCallback(renderCharacter, { timeout: 1600 });
+    } else {
+      timeoutId = window.setTimeout(renderCharacter, 900);
+    }
+
+    return () => {
+      if (idleId !== undefined) {
+        window.cancelIdleCallback(idleId);
+      }
+
+      window.clearTimeout(timeoutId);
+    };
+  }, [canRenderCharacter, isEnabled]);
+
+  return isEnabled && canRenderCharacter;
+}
+
 function App() {
   const [activeTheme, setActiveTheme] = useState('default');
   const [isThemeMusicLinked, setIsThemeMusicLinked] = useState(true);
   const [activeIntroKey, setActiveIntroKey] = useState(null);
   const theme = themes[activeTheme];
   const themeMetrics = themeMetricsMap[activeTheme] ?? themeMetricsMap.default;
+  const shouldRenderHeroCharacter = useDeferredHeroCharacter(activeTheme === 'default');
+  const closeThemeIntro = useCallback(() => setActiveIntroKey(null), []);
+  const toggleThemeMusicLinked = useCallback(() => setIsThemeMusicLinked((value) => !value), []);
   const currentYear = useMemo(() => new Date().getFullYear(), []);
   const allTracks = useMemo(() => trackLibrary.map((track) => ({ ...track })), []);
   const activeTracks = useMemo(
@@ -443,6 +482,8 @@ function App() {
       setActiveIntroKey(null);
       return undefined;
     }
+
+    setActiveIntroKey(null);
 
     let cancelled = false;
 
@@ -488,15 +529,6 @@ function App() {
             </div>
           </div>
 
-          {/* <div className="topbar">
-            <a className="brand" href="#home">CHENLIWEN</a>
-            <nav className="nav">
-              {topNav.map((item) => (
-                <a key={item.href} href={item.href}>{item.label}</a>
-              ))}
-            </nav>
-            <a className="mini-link" href="mailto:1410762621@qq.com">Say Hello</a>
-          </div> */}
         </header>
 
         <main className="theme-stage" key={activeTheme}>
@@ -522,7 +554,7 @@ function App() {
             </div>
 
             <aside className="hero-panel theme-enter-right">
-              {activeTheme === 'default' ? (
+              {activeTheme === 'default' && shouldRenderHeroCharacter ? (
                 <Suspense fallback={<SpotlightCard theme={theme} />}>
                   <HeroCharacter
                     title={theme.spotlightTitle}
@@ -552,7 +584,7 @@ function App() {
               </div>
 
               <div className="stats-grid">
-                {themeMetrics.cards.map((card, i) => (
+                {themeMetrics.cards.map((card) => (
                   <DataRing
                     key={card.label}
                     label={card.label}
@@ -628,13 +660,13 @@ function App() {
         tracks={activeTracks}
         className="music-dock"
         isThemeLinked={isThemeMusicLinked}
-        onToggleThemeLinked={() => setIsThemeMusicLinked((value) => !value)}
+        onToggleThemeLinked={toggleThemeMusicLinked}
       />
 
       {activeIntroKey && themeIntroMap[activeIntroKey] ? (
         <ThemeIntroOverlay
           intro={themeIntroMap[activeIntroKey]}
-          onClose={() => setActiveIntroKey(null)}
+          onClose={closeThemeIntro}
         />
       ) : null}
     </div>

@@ -54,6 +54,7 @@ export default function MusicPlayer({
   onToggleThemeLinked,
 }) {
   const audioRef = useRef(null);
+  const previousTrackKeyRef = useRef(null);
   const [currentTrackId, setCurrentTrackId] = useState(tracks[0]?.id ?? null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -115,8 +116,19 @@ export default function MusicPlayer({
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !currentTrack) return;
+    if (!audio || !currentTrack) {
+      previousTrackKeyRef.current = null;
+      return;
+    }
+
+    const trackKey = `${currentTrack.id}:${currentTrack.src}`;
+    if (previousTrackKeyRef.current === trackKey) {
+      return;
+    }
+
+    previousTrackKeyRef.current = trackKey;
     audio.load();
+
     if (isPlaying) {
       audio.play().catch(() => {
         setIsPlaying(false);
