@@ -4,7 +4,7 @@ import { AnimationMixer, Box3, MathUtils, Vector3 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MetaRingsGrid } from './AbstractVisuals';
 
-const CHARACTER_MODEL_URL = '/models/poly/poly.glb';
+const CHARACTER_MODEL_URL = `${import.meta.env.BASE_URL}models/poly/poly.glb`;
 const CHARACTER_FLOOR_Y = -3.02;
 const CHARACTER_TARGET_HEIGHT = 3.52;
 const CHARACTER_FLOAT_AMPLITUDE = 0.07;

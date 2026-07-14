@@ -1,14 +1,11 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import MusicPlayer from './components/MusicPlayer';
 import RevealSection from './components/RevealSection';
 import { DataRing, GeoIndicator, ModeVisual, FloatingTagCloud } from './components/AbstractVisuals';
-import lolTrack from '../assets/lol/lol-theme.mp3';
-import deltaTrack from '../assets/delta/delta-theme.mp3';
-import cs2Track from '../assets/cs2/cs2-theme.mp3';
-import overwatchTrack from '../assets/overwatch/overwatch-theme.mp3';
-import valorantTrack from '../assets/valorant/valorant-theme.mp3';
 
 const HeroCharacter = lazy(() => import('./components/HeroCharacter'));
+
+const publicAsset = (path) => `${import.meta.env.BASE_URL}${path}`;
 
 const themes = {
   default: {
@@ -227,11 +224,11 @@ const themeOptions = [
 ];
 
 const trackLibrary = [
-  { id: 'lol-theme', title: 'Rift Anthem', subtitle: '英雄联盟主题 BGM', src: lolTrack, type: 'audio' },
-  { id: 'delta-theme', title: 'Tactical Advance', subtitle: '三角洲主题 BGM', src: deltaTrack, type: 'audio' },
-  { id: 'cs2-theme', title: 'Site Entry', subtitle: 'CS2 主题 BGM', src: cs2Track, type: 'audio' },
-  { id: 'overwatch-theme', title: 'Hero Relay', subtitle: '守望先锋主题 BGM', src: overwatchTrack, type: 'audio' },
-  { id: 'valorant-theme', title: 'Night Protocol', subtitle: '瓦罗兰特主题 BGM', src: valorantTrack, type: 'audio' },
+  { id: 'lol-theme', title: 'Rift Anthem', subtitle: '英雄联盟主题 BGM', src: publicAsset('audio/lol-theme.mp3'), type: 'audio' },
+  { id: 'delta-theme', title: 'Tactical Advance', subtitle: '三角洲主题 BGM', src: publicAsset('audio/delta-theme.mp3'), type: 'audio' },
+  { id: 'cs2-theme', title: 'Site Entry', subtitle: 'CS2 主题 BGM', src: publicAsset('audio/cs2-theme.mp3'), type: 'audio' },
+  { id: 'overwatch-theme', title: 'Hero Relay', subtitle: '守望先锋主题 BGM', src: publicAsset('audio/overwatch-theme.mp3'), type: 'audio' },
+  { id: 'valorant-theme', title: 'Night Protocol', subtitle: '瓦罗兰特主题 BGM', src: publicAsset('audio/valorant-theme.mp3'), type: 'audio' },
 ];
 
 const trackMap = Object.fromEntries(trackLibrary.map((track) => [track.id, track]));
@@ -247,31 +244,31 @@ const themeTrackMap = {
 
 const themeIntroMap = {
   lol: {
-    src: '/theme-intros/lol-intro.mp4',
+    src: publicAsset('theme-intros/lol-intro.mp4'),
     kicker: 'RIFT HIGHLIGHTS',
     title: '峡谷高光回放',
     description: '切入主题前，先用一段精彩操作把情绪拉满。',
   },
   delta: {
-    src: '/theme-intros/delta-intro.mp4',
+    src: publicAsset('theme-intros/delta-intro.mp4'),
     kicker: 'TACTICAL ENTRY',
     title: '战区部署集锦',
     description: '先看推进、协同和正面作战的关键镜头，再进入主题页。',
   },
   cs2: {
-    src: '/theme-intros/cs2-intro.mp4',
+    src: publicAsset('theme-intros/cs2-intro.mp4'),
     kicker: 'SITE EXECUTION',
     title: '残局与爆点操作',
     description: '先用高光镜头建立竞技 FPS 的压迫感，再展开完整页面。',
   },
   overwatch: {
-    src: '/theme-intros/overwatch-intro.mp4',
+    src: publicAsset('theme-intros/overwatch-intro.mp4'),
     kicker: 'HERO MOMENTS',
     title: '英雄入场高能片段',
     description: '开场先放一段英雄集锦，让主题切换更像角色登场。',
   },
   valorant: {
-    src: '/theme-intros/valorant-intro.mp4',
+    src: publicAsset('theme-intros/valorant-intro.mp4'),
     kicker: 'AGENT CLUTCH',
     title: '特工关键击杀集锦',
     description: '在进入页面之前，先看一段更利落的比赛片段。',
@@ -341,6 +338,138 @@ const themeMetricsMap = {
   },
 };
 
+const storageKeys = {
+  achievements: 'chenliwen-achievements-v1',
+  customTheme: 'chenliwen-custom-theme-v1',
+  visitedThemes: 'chenliwen-visited-themes-v1',
+  visitedEnvironments: 'chenliwen-visited-environments-v1',
+  visitedPresets: 'chenliwen-visited-presets-v1',
+  environment: 'chenliwen-environment-v1',
+  bootSeen: 'chenliwen-boot-seen-v1',
+};
+
+const githubIssueConfig = {
+  owner: 'chenliwen123',
+  repo: 'chenliwen123',
+  label: 'homepage-message',
+};
+
+const environmentPresets = [
+  { key: 'nebula', label: '星云深空', desc: '柔和星云、慢速浮光，适合默认主页。' },
+  { key: 'rain', label: '赛博雨夜', desc: '雨线与霓虹反光，适合 FPS 主题。' },
+  { key: 'grid', label: '战术网格', desc: '扫描网格和作战坐标，适合三角洲/CS2。' },
+  { key: 'ember', label: '熔火余烬', desc: '暖色火花和低频呼吸光，适合更热血的主题。' },
+];
+
+const briefingMap = {
+  default: {
+    kicker: 'PERSONAL BRIEFING',
+    title: '主页基地区域已上线',
+    objective: '把个人介绍、主题切换、音乐和互动模块整合成一个有记忆点的数字名片。',
+    intel: ['默认主题会优先展示暖色编辑感', '3D 人物会在浏览器空闲后加载', '指挥台可随时切换模式'],
+    cta: '开始浏览',
+  },
+  lol: {
+    kicker: 'RIFT MISSION',
+    title: '峡谷入场简报',
+    objective: '进入召唤师主题，展示你的峡谷偏好、英雄气质和排位节奏。',
+    intel: ['金色能量层强化史诗感', '数据面板适合替换成真实赛季数据', '音乐联动会自动锁定 LOL 曲目'],
+    cta: '进入峡谷',
+  },
+  delta: {
+    kicker: 'TACTICAL BRIEF',
+    title: '战区部署指令',
+    objective: '切入更硬朗的战术视觉，突出推进效率、生存判断和支援能力。',
+    intel: ['建议搭配战术网格环境', '指标更偏撤离率与 K/D', '适合加入装备与地图模块'],
+    cta: '开始部署',
+  },
+  cs2: {
+    kicker: 'SITE EXECUTE',
+    title: '爆点执行简报',
+    objective: '用竞技 FPS 的回合价值指标展示枪线质量、进点效率与残局压迫感。',
+    intel: ['ADR / KAST / ENTRY 已预留', '橙灰配色偏工业竞技感', '后续可加入地图池与准星配置'],
+    cta: '执行进点',
+  },
+  overwatch: {
+    kicker: 'HERO DEPLOYMENT',
+    title: '英雄出动简报',
+    objective: '突出团队参与、角色定位和英雄高光，让页面更像英雄档案。',
+    intel: ['橙色能量更偏英雄登场', '适合扩展常用英雄和职责', '音乐状态会联动 HUD 节拍'],
+    cta: '英雄就位',
+  },
+  valorant: {
+    kicker: 'AGENT DOSSIER',
+    title: '特工行动简报',
+    objective: '进入锐利、干练、压迫感更强的竞技档案，展示特工偏好和比赛节奏。',
+    intel: ['红黑切割感更强', '适合加入特工池和地图站位', '可以搭配赛博雨夜环境'],
+    cta: '锁定特工',
+  },
+};
+
+const achievementList = [
+  { id: 'deck_operator', title: '指挥台上线', desc: '第一次打开主题指挥台', icon: '⌘' },
+  { id: 'keyboard_commander', title: '快捷键指挥官', desc: '使用 Ctrl / ⌘ + K 打开指挥台', icon: '⌨' },
+  { id: 'first_jump', title: '主题跃迁', desc: '切换到任意非默认主题', icon: '◆' },
+  { id: 'homecoming', title: '回到主场', desc: '体验其他主题后回到默认主页', icon: '⌂' },
+  { id: 'random_warp', title: '随机跃迁', desc: '在指挥台执行一次随机主题切换', icon: '🎲' },
+  { id: 'theme_collector', title: '全主题巡航', desc: '访问全部 6 个主题', icon: '✦' },
+  { id: 'fps_route', title: 'FPS 路线侦察', desc: '访问三角洲、CS2 和瓦罗兰特主题', icon: '⌖' },
+  { id: 'hero_route', title: '英雄路线集合', desc: '访问英雄联盟和守望先锋主题', icon: '⚔' },
+  { id: 'music_ignition', title: '声波点火', desc: '启动一次页面音乐', icon: '♪' },
+  { id: 'playlist_unlocked', title: '自由播放模式', desc: '关闭主题音乐联动，解锁完整歌单', icon: '♫' },
+  { id: 'deep_scroll', title: '读到底部', desc: '浏览到页面底部区域', icon: '↓' },
+  { id: 'workshop_tuned', title: '调色工程师', desc: '启用一次自定义主题工坊', icon: '◎' },
+  { id: 'palette_collector', title: '调色收藏家', desc: '试过全部 4 套工坊配色', icon: '◍' },
+  { id: 'overdrive_glow', title: '光效过载', desc: '把工坊光效强度推到 80% 以上', icon: '✺' },
+  { id: 'guestbook_signal', title: '访客信号', desc: '打开一次 GitHub 留言入口', icon: '✉' },
+  { id: 'environment_shift', title: '环境切换', desc: '切换一次背景环境氛围', icon: '☄' },
+  { id: 'environment_collector', title: '环境采样员', desc: '体验全部 4 种背景环境', icon: '◌' },
+  { id: 'briefing_reader', title: '简报已阅', desc: '关闭一次任务简报并进入页面', icon: '▣' },
+  { id: 'intro_clear', title: '高光入场', desc: '观看或跳过一次主题入场视频', icon: '▶' },
+  { id: 'completionist', title: '全成就制霸', desc: '解锁除本项外的所有成就', icon: '🏆' },
+];
+
+const achievementMap = Object.fromEntries(achievementList.map((achievement) => [achievement.id, achievement]));
+
+const customThemePresets = [
+  { key: 'ember', label: '熔火橙', accent: '#ff9654', deep: '#d85b35', soft: '#ffe0b7', text: '#251116', rgb: '255, 150, 84' },
+  { key: 'neon', label: '霓虹蓝', accent: '#69d7ff', deep: '#3d88ff', soft: '#d9f5ff', text: '#04131d', rgb: '105, 215, 255' },
+  { key: 'toxic', label: '战术绿', accent: '#a8ff78', deep: '#5f9b45', soft: '#e1ffd3', text: '#0d1a0a', rgb: '168, 255, 120' },
+  { key: 'crimson', label: '特工红', accent: '#ff6e7a', deep: '#c4284d', soft: '#ffd0d5', text: '#26070b', rgb: '255, 110, 122' },
+];
+
+const defaultCustomTheme = {
+  enabled: false,
+  preset: 'ember',
+  intensity: 62,
+};
+
+function readStorageValue(key, fallback) {
+  if (typeof window === 'undefined') {
+    return fallback;
+  }
+
+  try {
+    const stored = window.localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : fallback;
+  } catch (error) {
+    console.warn(`无法读取本地配置：${key}`, error);
+    return fallback;
+  }
+}
+
+function writeStorageValue(key, value) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.warn(`无法保存本地配置：${key}`, error);
+  }
+}
+
 function SpotlightCard({ theme }) {
   return (
     <article className="feature-card intro-card">
@@ -402,6 +531,536 @@ function ThemeIntroOverlay({ intro, onClose }) {
   );
 }
 
+function BootLoader({ onComplete }) {
+  useEffect(() => {
+    const timeoutId = window.setTimeout(onComplete, 2200);
+    return () => window.clearTimeout(timeoutId);
+  }, [onComplete]);
+
+  return (
+    <div className="boot-loader" role="status" aria-label="页面启动加载中">
+      <div className="boot-terminal">
+        <p className="boot-kicker">CHENLIWEN.EXE</p>
+        <h2>Initializing Theme System</h2>
+        <ul>
+          <li>Loading visual modules...</li>
+          <li>Syncing audio HUD...</li>
+          <li>Connecting command deck...</li>
+          <li>Preparing mission briefing...</li>
+        </ul>
+        <div className="boot-progress"><span /></div>
+      </div>
+    </div>
+  );
+}
+
+function MissionBriefing({ themeKey, onClose }) {
+  const briefing = briefingMap[themeKey] ?? briefingMap.default;
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="mission-briefing" role="dialog" aria-modal="true" aria-label={`${briefing.title} 任务简报`}>
+      <button className="mission-backdrop" type="button" aria-label="关闭任务简报" onClick={onClose} />
+      <section className="mission-card">
+        <p className="eyebrow">{briefing.kicker}</p>
+        <h2>{briefing.title}</h2>
+        <p>{briefing.objective}</p>
+        <div className="mission-intel-grid">
+          {briefing.intel.map((item, index) => (
+            <article key={item}>
+              <span>{String(index + 1).padStart(2, '0')}</span>
+              <strong>{item}</strong>
+            </article>
+          ))}
+        </div>
+        <button className="button button-primary" type="button" onClick={onClose}>{briefing.cta}</button>
+      </section>
+    </div>
+  );
+}
+
+function EnvironmentLayer({ environmentKey }) {
+  return (
+    <div className={`environment-layer environment-${environmentKey}`} aria-hidden="true">
+      <span />
+      <span />
+      <span />
+    </div>
+  );
+}
+
+function CursorParticles({ isActive }) {
+  const [particles, setParticles] = useState([]);
+  const particleIdRef = useRef(0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    let lastSpawnTime = 0;
+    const handlePointerMove = (event) => {
+      const now = performance.now();
+      if (now - lastSpawnTime < (isActive ? 28 : 58)) {
+        return;
+      }
+
+      lastSpawnTime = now;
+      const id = particleIdRef.current + 1;
+      particleIdRef.current = id;
+
+      setParticles((currentParticles) => [
+        ...currentParticles.slice(-22),
+        {
+          id,
+          x: event.clientX,
+          y: event.clientY,
+          size: Math.round(7 + Math.random() * (isActive ? 18 : 10)),
+          driftX: Math.round((Math.random() - 0.5) * 52),
+          driftY: Math.round(-18 - Math.random() * 44),
+        },
+      ]);
+
+      window.setTimeout(() => {
+        setParticles((currentParticles) => currentParticles.filter((particle) => particle.id !== id));
+      }, 760);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove, { passive: true });
+    return () => window.removeEventListener('pointermove', handlePointerMove);
+  }, [isActive]);
+
+  return (
+    <div className={isActive ? 'cursor-particles is-active' : 'cursor-particles'} aria-hidden="true">
+      {particles.map((particle) => (
+        <span
+          key={particle.id}
+          style={{
+            left: particle.x,
+            top: particle.y,
+            width: particle.size,
+            height: particle.size,
+            '--drift-x': `${particle.driftX}px`,
+            '--drift-y': `${particle.driftY}px`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function GitHubMessages({ onUnlock }) {
+  const [messages, setMessages] = useState([]);
+  const [status, setStatus] = useState('正在连接 GitHub Issues 留言频道...');
+  const [visitorName, setVisitorName] = useState('');
+  const [messageText, setMessageText] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const issueListUrl = `https://api.github.com/repos/${githubIssueConfig.owner}/${githubIssueConfig.repo}/issues?state=open&labels=${encodeURIComponent(githubIssueConfig.label)}&per_page=6`;
+  const newIssueUrl = `https://github.com/${githubIssueConfig.owner}/${githubIssueConfig.repo}/issues/new?labels=${encodeURIComponent(githubIssueConfig.label)}&title=${encodeURIComponent('主页访客留言')}`;
+
+  const loadMessages = useCallback(() => {
+    let cancelled = false;
+
+    fetch(issueListUrl, { headers: { Accept: 'application/vnd.github+json' } })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`GitHub Issues 请求失败：${response.status}`);
+        }
+
+        return response.json();
+      })
+      .then((issues) => {
+        if (cancelled) {
+          return;
+        }
+
+        setMessages(Array.isArray(issues) ? issues.filter((issue) => !issue.pull_request) : []);
+        setStatus('已同步公开 GitHub Issues 留言');
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.warn(error);
+          setStatus('暂时无法读取 Issues，可直接打开 GitHub 留言');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [issueListUrl]);
+
+  useEffect(() => loadMessages(), [loadMessages]);
+
+  const submitMessage = async () => {
+    const message = messageText.trim();
+    if (message.length < 2) {
+      setSubmitError('留言至少需要 2 个字符');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError('');
+    setStatus('正在写入 GitHub Issues 留言...');
+
+    try {
+      const response = await fetch('/api/guestbook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          visitor: visitorName.trim(),
+          message,
+          company: '',
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || '留言提交失败');
+      }
+
+      onUnlock?.();
+      setMessageText('');
+      setVisitorName('');
+      setStatus('留言已写入 GitHub Issues，正在刷新留言墙...');
+      loadMessages();
+    } catch (error) {
+      console.warn(error);
+      setSubmitError(`${error.message}；你也可以用备用 GitHub 页面提交。`);
+      setStatus('页面内提交暂时不可用');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <RevealSection className="guestbook theme-transition-panel" id="guestbook">
+      <div className="section-stack theme-enter-bottom theme-delay-2">
+        <div className="section-heading">
+          <p className="eyebrow">GUESTBOOK</p>
+          <h2>访客留言墙 / GitHub Issues Channel</h2>
+          <p className="section-note">留言会直接写入 GitHub Issues；公开 Issue 会展示在这里。</p>
+        </div>
+
+        <div className="guestbook-layout">
+          <article className="guestbook-composer">
+            <span className="card-tag">WRITE MESSAGE</span>
+            <label className="guestbook-field">
+              <span>昵称</span>
+              <input
+                value={visitorName}
+                onChange={(event) => setVisitorName(event.target.value)}
+                maxLength="40"
+                placeholder="可以留空，默认显示访客"
+              />
+            </label>
+            <textarea
+              value={messageText}
+              onChange={(event) => setMessageText(event.target.value)}
+              placeholder="写一句想留在主页上的话..."
+              maxLength="600"
+              rows="5"
+            />
+            <input className="guestbook-trap" tabIndex="-1" autoComplete="off" aria-hidden="true" />
+            {submitError ? <p className="guestbook-error">{submitError}</p> : null}
+            <div className="guestbook-actions">
+              <button className="button button-primary" type="button" onClick={submitMessage} disabled={isSubmitting}>
+                {isSubmitting ? '提交中...' : '直接留言'}
+              </button>
+              <a className="button button-secondary" href={`https://github.com/${githubIssueConfig.owner}/${githubIssueConfig.repo}/issues?q=label%3A${githubIssueConfig.label}`} target="_blank" rel="noreferrer">查看全部留言</a>
+              <a className="button button-secondary" href={`${newIssueUrl}&body=${encodeURIComponent(`来自个人主页的访客留言：\n\n${messageText.trim()}`)}`} target="_blank" rel="noreferrer">备用 GitHub 提交</a>
+            </div>
+          </article>
+
+          <div className="guestbook-feed">
+            <p className="guestbook-status">{status}</p>
+            {messages.length ? messages.map((message) => (
+              <a className="guestbook-message" key={message.id} href={message.html_url} target="_blank" rel="noreferrer">
+                <span>#{message.number}</span>
+                <strong>{message.title}</strong>
+                <small>{message.user?.login ?? 'visitor'} · {new Date(message.created_at).toLocaleDateString('zh-CN')}</small>
+              </a>
+            )) : (
+              <article className="guestbook-message is-empty">
+                <span>INIT</span>
+                <strong>还没有同步到公开留言</strong>
+                <small>可以成为第一条 GitHub Issue 留言。</small>
+              </article>
+            )}
+          </div>
+        </div>
+      </div>
+    </RevealSection>
+  );
+}
+
+function isEditableTarget(target) {
+  const tagName = target?.tagName?.toLowerCase();
+  return target?.isContentEditable || tagName === 'input' || tagName === 'textarea' || tagName === 'select';
+}
+
+function CommandDeck({
+  achievements,
+  activeTheme,
+  customTheme,
+  environmentKey,
+  isMusicPlaying,
+  isThemeMusicLinked,
+  onClose,
+  onLaunchRandom,
+  onSetEnvironment,
+  onSelectTheme,
+  onSetCustomTheme,
+  onToggleCustomTheme,
+  onToggleThemeMusic,
+}) {
+  const activeThemeData = themes[activeTheme];
+  const activeMetrics = themeMetricsMap[activeTheme] ?? themeMetricsMap.default;
+  const radarTags = activeThemeData.tags.slice(0, 4);
+  const unlockedAchievements = achievementList.filter((achievement) => achievements.includes(achievement.id));
+  const activePreset = customThemePresets.find((preset) => preset.key === customTheme.preset) ?? customThemePresets[0];
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  return (
+    <div className="command-deck" role="dialog" aria-modal="true" aria-label="主题指挥台">
+      <button className="command-deck-backdrop" type="button" aria-label="关闭主题指挥台" onClick={onClose} />
+
+      <section className="command-panel" aria-labelledby="command-deck-title">
+        <div className="command-panel-topline">
+          <p className="eyebrow">COMMAND DECK / CTRL + K</p>
+          <button className="command-close" type="button" onClick={onClose} aria-label="关闭主题指挥台">
+            ESC
+          </button>
+        </div>
+
+        <div className="command-layout">
+          <div className="command-copy">
+            <h2 id="command-deck-title">主题指挥台</h2>
+            <p>
+              像选择任务一样切换主页气质：按数字 1-6 直接启动主题，按 R 随机传送，按 ESC 关闭面板。
+            </p>
+
+            <div className="command-status-grid">
+              <article>
+                <span>ACTIVE MODE</span>
+                <strong>{activeThemeData.modeLabel}</strong>
+              </article>
+              <article>
+                <span>MUSIC LINK</span>
+                <button type="button" onClick={onToggleThemeMusic}>
+                  {isThemeMusicLinked ? '主题联动' : '自由播放'}
+                </button>
+              </article>
+              <article>
+                <span>AUDIO HUD</span>
+                <strong>{isMusicPlaying ? '声波同步中' : '等待点火'}</strong>
+              </article>
+            </div>
+
+            <div className="command-actions">
+              <button className="button button-primary" type="button" onClick={onLaunchRandom}>
+                随机传送主题
+              </button>
+              <button className="button button-secondary" type="button" onClick={onClose}>
+                返回当前页面
+              </button>
+            </div>
+          </div>
+
+          <div className="command-radar" aria-hidden="true">
+            <span className="command-radar-ring" />
+            <span className="command-radar-ring" />
+            <span className="command-radar-sweep" />
+            <div className="command-radar-core">
+              <strong>{activeThemeData.key.toUpperCase()}</strong>
+              <span>{isMusicPlaying ? 'ON' : activeMetrics.cards[0].value}</span>
+            </div>
+            {radarTags.map((tag, index) => (
+              <em key={tag} style={{ '--tag-index': index }}>{tag}</em>
+            ))}
+          </div>
+        </div>
+
+        <div className="command-theme-grid" aria-label="可启动主题">
+          {themeOptions.map((option, index) => {
+            const optionTheme = themes[option.key];
+            const optionMetrics = themeMetricsMap[option.key] ?? themeMetricsMap.default;
+            const isActive = option.key === activeTheme;
+
+            return (
+              <button
+                key={option.key}
+                className={isActive ? 'command-theme-card is-active' : 'command-theme-card'}
+                type="button"
+                onClick={() => onSelectTheme(option.key)}
+              >
+                <span className="command-theme-index">{String(index + 1).padStart(2, '0')}</span>
+                <span className="command-theme-main">
+                  <strong>{option.label}</strong>
+                  <small>{optionTheme.badge}</small>
+                </span>
+                <span className="command-theme-stat">
+                  {optionMetrics.cards[0].label} · {optionMetrics.cards[0].value}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="command-lab-grid">
+          <section className="command-lab-card command-achievements" aria-labelledby="achievement-title">
+            <div className="command-lab-heading">
+              <span>ACHIEVEMENTS</span>
+              <strong>{unlockedAchievements.length}/{achievementList.length}</strong>
+            </div>
+            <h3 id="achievement-title">成就系统</h3>
+            <div className="achievement-grid">
+              {achievementList.map((achievement) => {
+                const isUnlocked = achievements.includes(achievement.id);
+                return (
+                  <article key={achievement.id} className={isUnlocked ? 'achievement-chip is-unlocked' : 'achievement-chip'}>
+                    <span>{achievement.icon}</span>
+                    <strong>{achievement.title}</strong>
+                    <small>{achievement.desc}</small>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="command-lab-card command-workshop" aria-labelledby="workshop-title">
+            <div className="command-lab-heading">
+              <span>THEME WORKSHOP</span>
+              <button type="button" onClick={onToggleCustomTheme}>
+                {customTheme.enabled ? '已启用' : '启用'}
+              </button>
+            </div>
+            <h3 id="workshop-title">自定义主题工坊</h3>
+            <p>选择一个能量配色，并调整光效强度。设置会保存在本地。</p>
+
+            <div className="preset-grid">
+              {customThemePresets.map((preset) => (
+                <button
+                  key={preset.key}
+                  className={preset.key === customTheme.preset ? 'preset-chip is-active' : 'preset-chip'}
+                  type="button"
+                  onClick={() => onSetCustomTheme({ preset: preset.key, enabled: true })}
+                  style={{ '--preset-color': preset.accent }}
+                >
+                  <span />
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
+            <label className="workshop-range">
+              <span>光效强度 · {customTheme.intensity}%</span>
+              <input
+                type="range"
+                min="24"
+                max="88"
+                value={customTheme.intensity}
+                onChange={(event) => onSetCustomTheme({ intensity: Number(event.target.value), enabled: true })}
+              />
+            </label>
+
+            <div className="workshop-preview" style={{ '--preview-color': activePreset.accent }}>
+              <span />
+              <strong>{activePreset.label}</strong>
+              <small>{customTheme.enabled ? '正在覆盖当前主题能量色' : '启用后覆盖当前主题能量色'}</small>
+            </div>
+          </section>
+        </div>
+
+        <section className="command-lab-card command-environments" aria-labelledby="environment-title">
+          <div className="command-lab-heading">
+            <span>ENVIRONMENT SWITCH</span>
+            <strong>{environmentPresets.find((preset) => preset.key === environmentKey)?.label}</strong>
+          </div>
+          <h3 id="environment-title">背景环境切换</h3>
+          <div className="environment-preset-grid">
+            {environmentPresets.map((preset) => (
+              <button
+                key={preset.key}
+                className={preset.key === environmentKey ? 'environment-preset-card is-active' : 'environment-preset-card'}
+                type="button"
+                onClick={() => onSetEnvironment(preset.key)}
+              >
+                <strong>{preset.label}</strong>
+                <small>{preset.desc}</small>
+              </button>
+            ))}
+          </div>
+        </section>
+      </section>
+    </div>
+  );
+}
+
+function AudioVisualizerHud({ activeTheme, isPlaying, track, unlockedCount }) {
+  const activeThemeLabel = themes[activeTheme]?.modeLabel ?? '默认主页';
+
+  return (
+    <aside className={isPlaying ? 'audio-hud is-active' : 'audio-hud'} aria-live="polite">
+      <div className="audio-hud-orb" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
+      <div className="audio-hud-copy">
+        <p>Audio HUD</p>
+        <strong>{track?.title ?? '等待音乐点火'}</strong>
+        <small>{isPlaying ? `${activeThemeLabel} · 声波同步中` : `已解锁 ${unlockedCount} 个成就`}</small>
+      </div>
+      <div className="audio-hud-bars" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+        <span />
+        <span />
+        <span />
+      </div>
+    </aside>
+  );
+}
+
+function AchievementToast({ achievementId }) {
+  const achievement = achievementMap[achievementId];
+
+  if (!achievement) {
+    return null;
+  }
+
+  return (
+    <div className="achievement-toast" role="status" aria-live="polite" key={achievement.id}>
+      <span>{achievement.icon}</span>
+      <div>
+        <p>成就解锁</p>
+        <strong>{achievement.title}</strong>
+        <small>{achievement.desc}</small>
+      </div>
+    </div>
+  );
+}
+
 function useDeferredHeroCharacter(isEnabled) {
   const [canRenderCharacter, setCanRenderCharacter] = useState(false);
 
@@ -447,13 +1106,144 @@ function useDeferredHeroCharacter(isEnabled) {
 function App() {
   const [activeTheme, setActiveTheme] = useState('default');
   const [isThemeMusicLinked, setIsThemeMusicLinked] = useState(true);
+  const [isCommandDeckOpen, setIsCommandDeckOpen] = useState(false);
+  const [musicState, setMusicState] = useState({ isPlaying: false, track: null });
+  const [isBootVisible, setIsBootVisible] = useState(() => !readStorageValue(storageKeys.bootSeen, false));
+  const [activeBriefingKey, setActiveBriefingKey] = useState(null);
+  const briefedThemeRef = useRef(null);
+  const [environmentKey, setEnvironmentKey] = useState(() => readStorageValue(storageKeys.environment, 'nebula'));
+  const [achievements, setAchievements] = useState(() => readStorageValue(storageKeys.achievements, []));
+  const [latestAchievementId, setLatestAchievementId] = useState(null);
+  const [visitedThemes, setVisitedThemes] = useState(() => readStorageValue(storageKeys.visitedThemes, ['default']));
+  const [visitedEnvironments, setVisitedEnvironments] = useState(() => readStorageValue(storageKeys.visitedEnvironments, [environmentKey]));
+  const [visitedPresets, setVisitedPresets] = useState(() => readStorageValue(storageKeys.visitedPresets, []));
+  const [customTheme, setCustomTheme] = useState(() => ({
+    ...defaultCustomTheme,
+    ...readStorageValue(storageKeys.customTheme, defaultCustomTheme),
+  }));
   const [activeIntroKey, setActiveIntroKey] = useState(null);
   const theme = themes[activeTheme];
   const themeMetrics = themeMetricsMap[activeTheme] ?? themeMetricsMap.default;
   const shouldRenderHeroCharacter = useDeferredHeroCharacter(activeTheme === 'default');
-  const closeThemeIntro = useCallback(() => setActiveIntroKey(null), []);
-  const toggleThemeMusicLinked = useCallback(() => setIsThemeMusicLinked((value) => !value), []);
+  const unlockAchievement = useCallback((achievementId) => {
+    if (!achievementMap[achievementId] || achievements.includes(achievementId)) {
+      return;
+    }
+
+    setAchievements((currentAchievements) => {
+      if (currentAchievements.includes(achievementId)) {
+        return currentAchievements;
+      }
+
+      return [...currentAchievements, achievementId];
+    });
+    setLatestAchievementId(achievementId);
+  }, [achievements]);
+  const openCommandDeck = useCallback(() => {
+    setIsCommandDeckOpen(true);
+    unlockAchievement('deck_operator');
+  }, [unlockAchievement]);
+  const closeCommandDeck = useCallback(() => setIsCommandDeckOpen(false), []);
+  const closeThemeIntro = useCallback(() => {
+    setActiveIntroKey(null);
+    unlockAchievement('intro_clear');
+  }, [unlockAchievement]);
+  const closeMissionBriefing = useCallback(() => {
+    setActiveBriefingKey(null);
+    unlockAchievement('briefing_reader');
+  }, [unlockAchievement]);
+  const toggleThemeMusicLinked = useCallback(() => {
+    setIsThemeMusicLinked((value) => {
+      if (value) {
+        unlockAchievement('playlist_unlocked');
+      }
+
+      return !value;
+    });
+  }, [unlockAchievement]);
+  const selectTheme = useCallback((themeKey) => {
+    setActiveTheme(themeKey);
+    setIsCommandDeckOpen(false);
+    if (themeKey !== 'default') {
+      unlockAchievement('first_jump');
+    } else if (visitedThemes.some((visitedTheme) => visitedTheme !== 'default')) {
+      unlockAchievement('homecoming');
+    }
+  }, [unlockAchievement, visitedThemes]);
+  const launchRandomTheme = useCallback(() => {
+    const candidates = themeOptions.filter((option) => option.key !== activeTheme);
+    const nextTheme = candidates[Math.floor(Math.random() * candidates.length)] ?? themeOptions[0];
+    unlockAchievement('random_warp');
+    selectTheme(nextTheme.key);
+  }, [activeTheme, selectTheme, unlockAchievement]);
+  const setCustomThemePatch = useCallback((patch) => {
+    setCustomTheme((currentTheme) => ({ ...currentTheme, ...patch }));
+    if (patch.preset) {
+      setVisitedPresets((currentPresets) => (
+        currentPresets.includes(patch.preset) ? currentPresets : [...currentPresets, patch.preset]
+      ));
+    }
+    if (Number(patch.intensity) >= 80) {
+      unlockAchievement('overdrive_glow');
+    }
+    unlockAchievement('workshop_tuned');
+  }, [unlockAchievement]);
+  const toggleCustomTheme = useCallback(() => {
+    setCustomTheme((currentTheme) => {
+      setVisitedPresets((currentPresets) => (
+        currentPresets.includes(currentTheme.preset) ? currentPresets : [...currentPresets, currentTheme.preset]
+      ));
+      return { ...currentTheme, enabled: !currentTheme.enabled };
+    });
+    unlockAchievement('workshop_tuned');
+  }, [unlockAchievement]);
+  const handlePlaybackChange = useCallback((nextMusicState) => {
+    setMusicState(nextMusicState);
+    if (nextMusicState.isPlaying) {
+      unlockAchievement('music_ignition');
+    }
+  }, [unlockAchievement]);
+  const completeBoot = useCallback(() => {
+    setIsBootVisible(false);
+    writeStorageValue(storageKeys.bootSeen, true);
+  }, []);
+  const setEnvironment = useCallback((nextEnvironmentKey) => {
+    setEnvironmentKey(nextEnvironmentKey);
+    setVisitedEnvironments((currentEnvironments) => (
+      currentEnvironments.includes(nextEnvironmentKey) ? currentEnvironments : [...currentEnvironments, nextEnvironmentKey]
+    ));
+    unlockAchievement('environment_shift');
+  }, [unlockAchievement]);
   const currentYear = useMemo(() => new Date().getFullYear(), []);
+  const activeCustomPreset = useMemo(
+    () => customThemePresets.find((preset) => preset.key === customTheme.preset) ?? customThemePresets[0],
+    [customTheme.preset],
+  );
+  const customThemeStyle = useMemo(() => {
+    if (!customTheme.enabled) {
+      return undefined;
+    }
+
+    const glowOpacity = Math.max(0.16, Math.min(0.72, customTheme.intensity / 100));
+
+    return {
+      '--accent': activeCustomPreset.accent,
+      '--accent-deep': activeCustomPreset.deep,
+      '--accent-soft': activeCustomPreset.soft,
+      '--theme-glow': `rgba(${activeCustomPreset.rgb}, ${glowOpacity})`,
+      '--button-primary-text': activeCustomPreset.text,
+      '--button-primary-start': activeCustomPreset.soft,
+      '--button-primary-mid': activeCustomPreset.accent,
+      '--button-primary-end': activeCustomPreset.deep,
+      '--button-primary-shadow': `rgba(${activeCustomPreset.rgb}, ${glowOpacity * 0.78})`,
+      '--chip-active-text': activeCustomPreset.text,
+      '--chip-active-start': activeCustomPreset.soft,
+      '--chip-active-mid': activeCustomPreset.accent,
+      '--chip-active-end': activeCustomPreset.deep,
+      '--chip-active-shadow': `rgba(${activeCustomPreset.rgb}, ${glowOpacity * 0.78})`,
+      '--music-dock-highlight': `rgba(${activeCustomPreset.rgb}, ${glowOpacity * 0.35})`,
+    };
+  }, [activeCustomPreset, customTheme.enabled, customTheme.intensity]);
   const allTracks = useMemo(() => trackLibrary.map((track) => ({ ...track })), []);
   const activeTracks = useMemo(
     () => {
@@ -472,6 +1262,148 @@ function App() {
   );
 
   useEffect(() => {
+    if (!latestAchievementId) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => setLatestAchievementId(null), 3200);
+    return () => window.clearTimeout(timeoutId);
+  }, [latestAchievementId]);
+
+  useEffect(() => {
+    writeStorageValue(storageKeys.achievements, achievements);
+  }, [achievements]);
+
+  useEffect(() => {
+    writeStorageValue(storageKeys.customTheme, customTheme);
+  }, [customTheme]);
+
+  useEffect(() => {
+    writeStorageValue(storageKeys.visitedPresets, visitedPresets);
+    if (customThemePresets.every((preset) => visitedPresets.includes(preset.key))) {
+      unlockAchievement('palette_collector');
+    }
+  }, [unlockAchievement, visitedPresets]);
+
+  useEffect(() => {
+    writeStorageValue(storageKeys.environment, environmentKey);
+  }, [environmentKey]);
+
+  useEffect(() => {
+    writeStorageValue(storageKeys.visitedEnvironments, visitedEnvironments);
+    if (environmentPresets.every((preset) => visitedEnvironments.includes(preset.key))) {
+      unlockAchievement('environment_collector');
+    }
+  }, [unlockAchievement, visitedEnvironments]);
+
+  useEffect(() => {
+    writeStorageValue(storageKeys.visitedThemes, visitedThemes);
+    if (themeOptions.every((option) => visitedThemes.includes(option.key))) {
+      unlockAchievement('theme_collector');
+    }
+    if (['delta', 'cs2', 'valorant'].every((themeKey) => visitedThemes.includes(themeKey))) {
+      unlockAchievement('fps_route');
+    }
+    if (['lol', 'overwatch'].every((themeKey) => visitedThemes.includes(themeKey))) {
+      unlockAchievement('hero_route');
+    }
+  }, [unlockAchievement, visitedThemes]);
+
+  useEffect(() => {
+    const regularAchievements = achievementList.filter((achievement) => achievement.id !== 'completionist');
+    if (regularAchievements.every((achievement) => achievements.includes(achievement.id))) {
+      unlockAchievement('completionist');
+    }
+  }, [achievements, unlockAchievement]);
+
+  useEffect(() => {
+    setVisitedThemes((currentThemes) => (
+      currentThemes.includes(activeTheme) ? currentThemes : [...currentThemes, activeTheme]
+    ));
+  }, [activeTheme]);
+
+  useEffect(() => {
+    if (isBootVisible || briefedThemeRef.current === activeTheme) {
+      return;
+    }
+
+    briefedThemeRef.current = activeTheme;
+    setActiveBriefingKey(activeTheme);
+  }, [activeTheme, isBootVisible]);
+
+  useEffect(() => {
+    const contactSection = document.getElementById('contact');
+    if (!contactSection || achievements.includes('deep_scroll')) {
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          unlockAchievement('deep_scroll');
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.45 },
+    );
+
+    observer.observe(contactSection);
+    return () => observer.disconnect();
+  }, [achievements, unlockAchievement]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.defaultPrevented || isEditableTarget(event.target)) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      if ((event.ctrlKey || event.metaKey) && key === 'k') {
+        event.preventDefault();
+        setIsCommandDeckOpen((value) => {
+          const nextValue = !value;
+          if (nextValue) {
+            unlockAchievement('deck_operator');
+            unlockAchievement('keyboard_commander');
+          }
+
+          return nextValue;
+        });
+        return;
+      }
+
+      if (!isCommandDeckOpen) {
+        return;
+      }
+
+      if (key === 'escape') {
+        event.preventDefault();
+        closeCommandDeck();
+        return;
+      }
+
+      if (key === 'r') {
+        event.preventDefault();
+        launchRandomTheme();
+        return;
+      }
+
+      if (/^[1-6]$/.test(key)) {
+        event.preventDefault();
+        selectTheme(themeOptions[Number(key) - 1].key);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [closeCommandDeck, isCommandDeckOpen, launchRandomTheme, selectTheme, unlockAchievement]);
+
+  useEffect(() => {
+    if (isCommandDeckOpen) {
+      setActiveIntroKey(null);
+      return undefined;
+    }
+
     if (activeTheme === 'default') {
       setActiveIntroKey(null);
       return undefined;
@@ -502,10 +1434,15 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [activeTheme]);
+  }, [activeTheme, isCommandDeckOpen]);
 
   return (
-    <div className={`app theme-${activeTheme}`}>
+    <div
+      className={`app theme-${activeTheme} ${musicState.isPlaying ? 'is-music-reactive' : ''} ${customTheme.enabled ? 'has-custom-theme' : ''}`.trim()}
+      style={customThemeStyle}
+    >
+      <EnvironmentLayer environmentKey={environmentKey} />
+      <CursorParticles isActive={musicState.isPlaying} />
       <div className="theme-flash" key={activeTheme} aria-hidden="true" />
       <div className="page-shell">
         <div className="ambient ambient-one" aria-hidden="true" />
@@ -521,12 +1458,22 @@ function App() {
                   role="tab"
                   aria-selected={activeTheme === option.key}
                   className={activeTheme === option.key ? 'theme-chip is-active' : 'theme-chip'}
-                  onClick={() => setActiveTheme(option.key)}
+                  onClick={() => selectTheme(option.key)}
                 >
                   {option.label}
                 </button>
               ))}
             </div>
+            <button
+              className="command-launcher"
+              type="button"
+              onClick={openCommandDeck}
+              aria-label="打开主题指挥台"
+              title="Ctrl / ⌘ + K 打开主题指挥台"
+            >
+              <span className="command-launcher-core">⌘K</span>
+              <span>指挥台</span>
+            </button>
           </div>
 
         </header>
@@ -543,7 +1490,7 @@ function App() {
 
               <div className="hero-actions">
                 <a className="button button-primary" href="mailto:1410762621@qq.com">发邮件给我</a>
-                <a className="button button-secondary" href="https://github.com/chenliwen123/diary/issues/new" target="_blank" rel="noreferrer">留言给我</a>
+                <a className="button button-secondary" href="https://github.com/chenliwen123/chenliwen123/issues/new" target="_blank" rel="noreferrer">留言给我</a>
               </div>
 
               <ul className="hero-facts">
@@ -649,6 +1596,8 @@ function App() {
               </div>
             </div>
           </RevealSection>
+
+          <GitHubMessages onUnlock={() => unlockAchievement('guestbook_signal')} />
         </main>
 
         <footer className="footer">
@@ -660,8 +1609,42 @@ function App() {
         tracks={activeTracks}
         className="music-dock"
         isThemeLinked={isThemeMusicLinked}
+        onPlaybackChange={handlePlaybackChange}
         onToggleThemeLinked={toggleThemeMusicLinked}
       />
+
+      <AudioVisualizerHud
+        activeTheme={activeTheme}
+        isPlaying={musicState.isPlaying}
+        track={musicState.track}
+        unlockedCount={achievements.length}
+      />
+
+      <AchievementToast achievementId={latestAchievementId} />
+
+      {isBootVisible ? <BootLoader onComplete={completeBoot} /> : null}
+
+      {!isBootVisible && activeBriefingKey ? (
+        <MissionBriefing themeKey={activeBriefingKey} onClose={closeMissionBriefing} />
+      ) : null}
+
+      {isCommandDeckOpen ? (
+        <CommandDeck
+          achievements={achievements}
+          activeTheme={activeTheme}
+          customTheme={customTheme}
+          environmentKey={environmentKey}
+          isMusicPlaying={musicState.isPlaying}
+          isThemeMusicLinked={isThemeMusicLinked}
+          onClose={closeCommandDeck}
+          onLaunchRandom={launchRandomTheme}
+          onSetEnvironment={setEnvironment}
+          onSelectTheme={selectTheme}
+          onSetCustomTheme={setCustomThemePatch}
+          onToggleCustomTheme={toggleCustomTheme}
+          onToggleThemeMusic={toggleThemeMusicLinked}
+        />
+      ) : null}
 
       {activeIntroKey && themeIntroMap[activeIntroKey] ? (
         <ThemeIntroOverlay

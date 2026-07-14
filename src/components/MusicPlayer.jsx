@@ -51,6 +51,7 @@ export default function MusicPlayer({
   tracks,
   className = '',
   isThemeLinked = true,
+  onPlaybackChange,
   onToggleThemeLinked,
 }) {
   const audioRef = useRef(null);
@@ -96,9 +97,13 @@ export default function MusicPlayer({
     const onPlay = () => {
       setIsPlaying(true);
       setStatus(`正在播放：${currentTrack.title}`);
+      onPlaybackChange?.({ isPlaying: true, track: currentTrack });
     };
 
-    const onPause = () => setIsPlaying(false);
+    const onPause = () => {
+      setIsPlaying(false);
+      onPlaybackChange?.({ isPlaying: false, track: currentTrack });
+    };
     const onVolumeChange = () => setIsMuted(audio.muted);
 
     audio.addEventListener('ended', onEnded);
@@ -112,7 +117,7 @@ export default function MusicPlayer({
       audio.removeEventListener('pause', onPause);
       audio.removeEventListener('volumechange', onVolumeChange);
     };
-  }, [currentIndex, currentTrack, tracks]);
+  }, [currentIndex, currentTrack, onPlaybackChange, tracks]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -122,23 +127,31 @@ export default function MusicPlayer({
     }
 
     const trackKey = `${currentTrack.id}:${currentTrack.src}`;
-    if (previousTrackKeyRef.current === trackKey) {
-      return;
-    }
-
+    const didTrackChange = previousTrackKeyRef.current !== trackKey;
     previousTrackKeyRef.current = trackKey;
-    audio.load();
 
-    if (isPlaying) {
-      audio.play().catch(() => {
-        setIsPlaying(false);
-        setStatus('当前媒体暂时无法自动切换播放，请手动再点一次播放');
-      });
+    if (!didTrackChange) {
       return;
     }
 
-    setStatus(`当前曲目：${currentTrack.title}`);
+    if (!isPlaying) {
+      setStatus(`当前曲目：${currentTrack.title}`);
+      return;
+    }
+
+    audio.load();
+    audio.play().catch(() => {
+      setIsPlaying(false);
+      setStatus('当前媒体暂时无法自动切换播放，请手动再点一次播放');
+    });
   }, [currentTrack, isPlaying]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.muted = isMuted;
+    }
+  }, [currentTrack, isMuted]);
 
   const changeTrack = (direction) => {
     if (!canChangeTrack) return;
@@ -290,7 +303,7 @@ export default function MusicPlayer({
         </>
       )}
 
-      <audio ref={audioRef} preload="metadata">
+      <audio key={currentTrack.src} ref={audioRef} preload="none">
         <source src={currentTrack.src} type={currentTrack.type === 'video' ? 'video/mp4' : 'audio/mpeg'} />
       </audio>
     </article>
