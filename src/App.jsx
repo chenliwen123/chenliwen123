@@ -339,6 +339,7 @@ const themeMetricsMap = {
 };
 
 const storageKeys = {
+  theme: 'chenliwen-active-theme-v1',
   achievements: 'chenliwen-achievements-v1',
   customTheme: 'chenliwen-custom-theme-v1',
   visitedThemes: 'chenliwen-visited-themes-v1',
@@ -346,12 +347,67 @@ const storageKeys = {
   visitedPresets: 'chenliwen-visited-presets-v1',
   environment: 'chenliwen-environment-v1',
   bootSeen: 'chenliwen-boot-seen-v1',
+  lastGuestbookSubmit: 'chenliwen-guestbook-last-submit-v1',
+  likedHomepage: 'chenliwen-liked-homepage-v1',
+  visitSession: 'chenliwen-visit-session-v1',
 };
 
 const githubIssueConfig = {
   owner: 'chenliwen123',
   repo: 'chenliwen123',
   label: 'homepage-message',
+  pinnedLabel: 'homepage-message-pinned',
+  pinnedNumbers: [1],
+};
+
+const guestbookCooldownMs = 60 * 1000;
+
+const siteMood = {
+  label: '今日状态',
+  value: '在线学习中',
+  note: '保持输入、保持迭代，今天也在给主页加新模块。',
+};
+
+const timelineItems = [
+  { date: '2026.07', label: 'Guestbook', title: 'GitHub Issues 留言墙上线', desc: '页面内留言、公开 Issue 展示、头像、置顶与加载更多整合完成。' },
+  { date: '2026.07', label: 'Interaction', title: '访客计数与点赞模块', desc: '用 Vercel API 写入统计 Issue，展示总访问、今日访问和主页喜欢数。' },
+  { date: '2026.07', label: 'Visual', title: '主题和音乐体验增强', desc: '根据时间推荐主题，播放器加入歌单、音量记忆和更完整的移动端体验。' },
+  { date: 'Next', label: 'Roadmap', title: '继续沉淀个人作品线', desc: '后续可以接入项目卡片、学习记录、真实游戏数据和更多彩蛋。' },
+];
+
+const festivalRules = [
+  { id: 'new-year', month: 1, day: 1, title: '元旦快乐', emoji: '🎆', tone: '新的一年，主页基地重新点火。', theme: 'default' },
+  { id: 'valentine', month: 2, day: 14, title: '情人节彩蛋', emoji: '💌', tone: '今天适合给留言墙留下一句温柔的话。', theme: 'default' },
+  { id: 'april-fool', month: 4, day: 1, title: '愚人节信号', emoji: '🃏', tone: '指挥台检测到一条不太正经的频道。', theme: 'valorant' },
+  { id: 'labor-day', month: 5, day: 1, title: '劳动节充能', emoji: '⚙️', tone: '给认真打磨页面的人一点掌声。', theme: 'delta' },
+  { id: 'children-day', month: 6, day: 1, title: '童心模式', emoji: '🧸', tone: '今天允许主页多一点好奇和玩心。', theme: 'overwatch' },
+  { id: 'national-day', month: 10, day: 1, title: '国庆特别模式', emoji: '🇨🇳', tone: '节日频道开启，祝今天热闹又顺利。', theme: 'lol' },
+  { id: 'halloween', month: 10, day: 31, title: '万圣夜频道', emoji: '🎃', tone: '深夜特工频道上线，小心隐藏彩蛋。', theme: 'valorant' },
+  { id: 'christmas', month: 12, day: 25, title: '圣诞快乐', emoji: '🎄', tone: '主页飘来一点冬日亮光。', theme: 'overwatch' },
+];
+
+const weatherCodeMap = {
+  0: ['晴朗', '☀️'],
+  1: ['大部晴朗', '🌤️'],
+  2: ['局部多云', '⛅'],
+  3: ['阴天', '☁️'],
+  45: ['有雾', '🌫️'],
+  48: ['雾凇', '🌫️'],
+  51: ['小毛毛雨', '🌦️'],
+  53: ['毛毛雨', '🌦️'],
+  55: ['强毛毛雨', '🌧️'],
+  61: ['小雨', '🌧️'],
+  63: ['中雨', '🌧️'],
+  65: ['大雨', '🌧️'],
+  71: ['小雪', '🌨️'],
+  73: ['中雪', '🌨️'],
+  75: ['大雪', '❄️'],
+  80: ['阵雨', '🌦️'],
+  81: ['强阵雨', '🌧️'],
+  82: ['暴雨', '⛈️'],
+  95: ['雷暴', '⛈️'],
+  96: ['雷暴冰雹', '⛈️'],
+  99: ['强雷暴冰雹', '⛈️'],
 };
 
 const environmentPresets = [
@@ -468,6 +524,129 @@ function writeStorageValue(key, value) {
   } catch (error) {
     console.warn(`无法保存本地配置：${key}`, error);
   }
+}
+
+function formatRelativeTime(dateValue) {
+  const timestamp = new Date(dateValue).getTime();
+  if (Number.isNaN(timestamp)) {
+    return '刚刚';
+  }
+
+  const diffSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (diffSeconds < 60) return '刚刚';
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  if (diffMinutes < 60) return `${diffMinutes}分钟前`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}小时前`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return '昨天';
+  if (diffDays < 7) return `${diffDays}天前`;
+
+  return new Date(dateValue).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+}
+
+function getIssueVisitorName(issue) {
+  const body = String(issue?.body ?? '');
+  const match = body.match(/访客：(.+)/);
+  return match?.[1]?.trim() || issue?.user?.login || 'visitor';
+}
+
+function getInitials(name) {
+  const cleanName = String(name || '访客').trim();
+  return Array.from(cleanName).slice(0, 2).join('').toUpperCase() || '访';
+}
+
+function isPinnedIssue(issue) {
+  const labels = Array.isArray(issue?.labels) ? issue.labels.map((label) => label.name) : [];
+  return labels.includes(githubIssueConfig.pinnedLabel) || githubIssueConfig.pinnedNumbers.includes(issue?.number);
+}
+
+function normalizeIssue(issue) {
+  const visitor = getIssueVisitorName(issue);
+  return {
+    ...issue,
+    visitor,
+    isPinned: isPinnedIssue(issue),
+  };
+}
+
+function sortIssues(issues) {
+  return [...issues].sort((leftIssue, rightIssue) => {
+    if (leftIssue.isPinned !== rightIssue.isPinned) {
+      return leftIssue.isPinned ? -1 : 1;
+    }
+
+    return new Date(rightIssue.created_at).getTime() - new Date(leftIssue.created_at).getTime();
+  });
+}
+
+function getTimeBasedTheme() {
+  const hour = new Date().getHours();
+  if (hour >= 6 && hour < 11) return 'default';
+  if (hour >= 11 && hour < 17) return 'overwatch';
+  if (hour >= 17 && hour < 22) return 'lol';
+  return 'valorant';
+}
+
+function getVisitSessionKey() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+
+function getTodayFestival() {
+  const parts = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    month: 'numeric',
+    day: 'numeric',
+  }).formatToParts(new Date());
+  const valueMap = Object.fromEntries(parts.map((part) => [part.type, Number(part.value)]));
+  return festivalRules.find((festival) => festival.month === valueMap.month && festival.day === valueMap.day) ?? null;
+}
+
+function getWeatherLabel(code) {
+  return weatherCodeMap[code] ?? ['未知天气', '◌'];
+}
+
+function getSunPhase({ sunrise, sunset }) {
+  const now = Date.now();
+  const sunriseTime = new Date(sunrise).getTime();
+  const sunsetTime = new Date(sunset).getTime();
+
+  if (!Number.isFinite(sunriseTime) || !Number.isFinite(sunsetTime)) {
+    return 'unknown';
+  }
+
+  const hour = 60 * 60 * 1000;
+  if (now < sunriseTime) return 'night';
+  if (now < sunriseTime + hour) return 'sunrise';
+  if (now < sunsetTime - hour) return 'day';
+  if (now < sunsetTime + hour) return 'sunset';
+  return 'night';
+}
+
+function getThemeForWeatherPhase(weatherCode, phase) {
+  if ([45, 48, 51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(weatherCode)) {
+    return { theme: 'valorant', environment: 'rain' };
+  }
+
+  if ([71, 73, 75].includes(weatherCode)) {
+    return { theme: 'overwatch', environment: 'nebula' };
+  }
+
+  if (phase === 'sunrise') return { theme: 'default', environment: 'ember' };
+  if (phase === 'sunset') return { theme: 'lol', environment: 'ember' };
+  if (phase === 'night') return { theme: 'valorant', environment: 'nebula' };
+  return { theme: 'default', environment: 'nebula' };
+}
+
+function formatClock(dateValue) {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return '--:--';
+  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 }
 
 function SpotlightCard({ theme }) {
@@ -655,19 +834,36 @@ function CursorParticles({ isActive }) {
           }}
         />
       ))}
+      {Array.from({ length: 18 }, (_, index) => (
+        <i
+          key={`star-${index}`}
+          className="star-particle"
+          style={{
+            '--star-left': `${(index * 23) % 100}%`,
+            '--star-top': `${(index * 37) % 100}%`,
+            '--star-delay': `${index * 0.28}s`,
+            '--star-size': `${2 + (index % 4)}px`,
+          }}
+        />
+      ))}
     </div>
   );
 }
 
 function GitHubMessages({ onUnlock }) {
   const [messages, setMessages] = useState([]);
+  const [visibleCount, setVisibleCount] = useState(6);
   const [status, setStatus] = useState('正在连接 GitHub Issues 留言频道...');
   const [visitorName, setVisitorName] = useState('');
   const [messageText, setMessageText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
-  const issueListUrl = `https://api.github.com/repos/${githubIssueConfig.owner}/${githubIssueConfig.repo}/issues?state=open&labels=${encodeURIComponent(githubIssueConfig.label)}&per_page=6`;
+  const [successIssue, setSuccessIssue] = useState(null);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const issueListUrl = `https://api.github.com/repos/${githubIssueConfig.owner}/${githubIssueConfig.repo}/issues?state=open&labels=${encodeURIComponent(githubIssueConfig.label)}&per_page=30`;
   const newIssueUrl = `https://github.com/${githubIssueConfig.owner}/${githubIssueConfig.repo}/issues/new?labels=${encodeURIComponent(githubIssueConfig.label)}&title=${encodeURIComponent('主页访客留言')}`;
+  const visibleMessages = messages.slice(0, visibleCount);
+  const hasMoreMessages = messages.length > visibleCount;
 
   const loadMessages = useCallback(() => {
     let cancelled = false;
@@ -685,7 +881,10 @@ function GitHubMessages({ onUnlock }) {
           return;
         }
 
-        setMessages(Array.isArray(issues) ? issues.filter((issue) => !issue.pull_request) : []);
+        const nextMessages = Array.isArray(issues)
+          ? sortIssues(issues.filter((issue) => !issue.pull_request).map(normalizeIssue))
+          : [];
+        setMessages(nextMessages);
         setStatus('已同步公开 GitHub Issues 留言');
       })
       .catch((error) => {
@@ -702,10 +901,27 @@ function GitHubMessages({ onUnlock }) {
 
   useEffect(() => loadMessages(), [loadMessages]);
 
+  useEffect(() => {
+    const updateCooldown = () => {
+      const lastSubmitAt = readStorageValue(storageKeys.lastGuestbookSubmit, 0);
+      const remainingSeconds = Math.ceil(Math.max(0, guestbookCooldownMs - (Date.now() - Number(lastSubmitAt))) / 1000);
+      setCooldownSeconds(remainingSeconds);
+    };
+
+    updateCooldown();
+    const intervalId = window.setInterval(updateCooldown, 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   const submitMessage = async () => {
     const message = messageText.trim();
     if (message.length < 2) {
       setSubmitError('留言至少需要 2 个字符');
+      return;
+    }
+
+    if (cooldownSeconds > 0) {
+      setSubmitError(`刚刚已经提交过啦，${cooldownSeconds} 秒后可以再次留言。`);
       return;
     }
 
@@ -730,8 +946,11 @@ function GitHubMessages({ onUnlock }) {
       }
 
       onUnlock?.();
+      writeStorageValue(storageKeys.lastGuestbookSubmit, Date.now());
+      setCooldownSeconds(Math.ceil(guestbookCooldownMs / 1000));
       setMessageText('');
       setVisitorName('');
+      setSuccessIssue(data.issue ?? null);
       setStatus('留言已写入 GitHub Issues，正在刷新留言墙...');
       loadMessages();
     } catch (error) {
@@ -775,32 +994,512 @@ function GitHubMessages({ onUnlock }) {
             {submitError ? <p className="guestbook-error">{submitError}</p> : null}
             <div className="guestbook-actions">
               <button className="button button-primary" type="button" onClick={submitMessage} disabled={isSubmitting}>
-                {isSubmitting ? '提交中...' : '直接留言'}
+                {isSubmitting ? '提交中...' : cooldownSeconds > 0 ? `${cooldownSeconds}s 后可留言` : '直接留言'}
               </button>
               <a className="button button-secondary" href={`https://github.com/${githubIssueConfig.owner}/${githubIssueConfig.repo}/issues?q=label%3A${githubIssueConfig.label}`} target="_blank" rel="noreferrer">查看全部留言</a>
               <a className="button button-secondary" href={`${newIssueUrl}&body=${encodeURIComponent(`来自个人主页的访客留言：\n\n${messageText.trim()}`)}`} target="_blank" rel="noreferrer">备用 GitHub 提交</a>
             </div>
+            <p className="guestbook-cooldown">为了防刷，同一浏览器提交后会冷却 60 秒。</p>
           </article>
 
           <div className="guestbook-feed">
             <p className="guestbook-status">{status}</p>
-            {messages.length ? messages.map((message) => (
-              <a className="guestbook-message" key={message.id} href={message.html_url} target="_blank" rel="noreferrer">
-                <span>#{message.number}</span>
-                <strong>{message.title}</strong>
-                <small>{message.user?.login ?? 'visitor'} · {new Date(message.created_at).toLocaleDateString('zh-CN')}</small>
+            {visibleMessages.length ? visibleMessages.map((message, index) => (
+              <a
+                className={message.isPinned ? 'guestbook-message is-pinned' : 'guestbook-message'}
+                key={message.id}
+                href={message.html_url}
+                target="_blank"
+                rel="noreferrer"
+                style={{ '--message-index': index }}
+              >
+                <div className="guestbook-avatar" aria-hidden="true">
+                  {message.user?.avatar_url ? <img src={message.user.avatar_url} alt="" loading="lazy" /> : <span>{getInitials(message.visitor)}</span>}
+                </div>
+                <div className="guestbook-message-copy">
+                  <span>{message.isPinned ? 'PINNED' : `#${message.number}`}</span>
+                  <strong>{message.title}</strong>
+                  <small>{message.visitor} · {formatRelativeTime(message.created_at)}</small>
+                </div>
               </a>
             )) : (
               <article className="guestbook-message is-empty">
-                <span>INIT</span>
-                <strong>还没有同步到公开留言</strong>
-                <small>可以成为第一条 GitHub Issue 留言。</small>
+                <div className="guestbook-avatar" aria-hidden="true"><span>INIT</span></div>
+                <div className="guestbook-message-copy">
+                  <span>INIT</span>
+                  <strong>还没有同步到公开留言</strong>
+                  <small>可以成为第一条 GitHub Issue 留言。</small>
+                </div>
               </article>
             )}
+            {hasMoreMessages ? (
+              <button className="button button-secondary guestbook-more" type="button" onClick={() => setVisibleCount((count) => count + 6)}>
+                查看更多留言（剩余 {messages.length - visibleCount} 条）
+              </button>
+            ) : null}
           </div>
+        </div>
+
+        {successIssue ? (
+          <div className="guestbook-success" role="status" aria-live="polite">
+            <div>
+              <span className="guestbook-success-icon">✓</span>
+              <strong>留言已送达</strong>
+              <p>已写入 GitHub Issue #{successIssue.number}，刷新后会出现在留言墙里。</p>
+            </div>
+            <a className="button button-primary" href={successIssue.html_url} target="_blank" rel="noreferrer">查看留言</a>
+            <button className="button button-secondary" type="button" onClick={() => setSuccessIssue(null)}>关闭</button>
+          </div>
+        ) : null}
+      </div>
+    </RevealSection>
+  );
+}
+
+function VisitorPulse({ onEgg }) {
+  const [stats, setStats] = useState({ totalVisits: 0, todayVisits: 0, likes: 0 });
+  const [status, setStatus] = useState('正在同步主页访客信号...');
+  const [hasLiked, setHasLiked] = useState(() => readStorageValue(storageKeys.likedHomepage, false));
+  const [isLiking, setIsLiking] = useState(false);
+
+  useEffect(() => {
+    const sessionKey = getVisitSessionKey();
+    const lastSession = readStorageValue(storageKeys.visitSession, '');
+    const shouldCountVisit = lastSession !== sessionKey;
+
+    fetch('/api/site-stats', {
+      method: shouldCountVisit ? 'POST' : 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      body: shouldCountVisit ? JSON.stringify({ action: 'visit' }) : undefined,
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`统计接口请求失败：${response.status}`);
+        }
+
+        return response.json();
+      })
+      .then((data) => {
+        if (data.stats) {
+          setStats(data.stats);
+        }
+        if (shouldCountVisit) {
+          writeStorageValue(storageKeys.visitSession, sessionKey);
+        }
+        setStatus(shouldCountVisit ? '今天第一次到访已记录' : '欢迎回来，今天已记录过访问');
+      })
+      .catch((error) => {
+        console.warn(error);
+        setStatus('统计接口暂时离线，本地仍可浏览全部内容');
+      });
+  }, []);
+
+  const likeHomepage = async () => {
+    if (hasLiked || isLiking) {
+      return;
+    }
+
+    setIsLiking(true);
+    try {
+      const response = await fetch('/api/site-stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'like' }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || '点赞同步失败');
+      }
+
+      if (data.stats) {
+        setStats(data.stats);
+      } else {
+        setStats((currentStats) => ({ ...currentStats, likes: currentStats.likes + 1 }));
+      }
+      setHasLiked(true);
+      writeStorageValue(storageKeys.likedHomepage, true);
+      setStatus('收到你的喜欢，主页能量 +1');
+    } catch (error) {
+      console.warn(error);
+      setStatus('点赞暂时同步失败，可以稍后再试');
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  return (
+    <RevealSection className="visitor-pulse theme-transition-panel" id="pulse">
+      <div className="section-stack theme-enter-bottom theme-delay-1">
+        <div className="section-heading">
+          <p className="eyebrow">LIVE PULSE</p>
+          <h2>访客信号 / 今日状态</h2>
+          <p className="section-note">记录访问、喜欢和当前主页状态，让页面更像一个在线基地。</p>
+        </div>
+
+        <div className="pulse-grid">
+          <article className="pulse-card mood-card">
+            <span className="card-tag">{siteMood.label}</span>
+            <h3>{siteMood.value}</h3>
+            <p>{siteMood.note}</p>
+          </article>
+          <article className="pulse-card">
+            <span className="card-tag">TOTAL VISITS</span>
+            <strong>{stats.totalVisits}</strong>
+            <p>主页累计访客信号</p>
+          </article>
+          <article className="pulse-card">
+            <span className="card-tag">TODAY</span>
+            <strong>{stats.todayVisits}</strong>
+            <p>今天已记录访问</p>
+          </article>
+          <article className="pulse-card like-card">
+            <span className="card-tag">LIKES</span>
+            <strong>{stats.likes}</strong>
+            <button className="button button-primary" type="button" onClick={likeHomepage} disabled={hasLiked || isLiking}>
+              {hasLiked ? '已点赞' : isLiking ? '同步中...' : '喜欢这个主页'}
+            </button>
+          </article>
+        </div>
+
+        <div className="pulse-status-row">
+          <p>{status}</p>
+          <button className="pulse-egg-button" type="button" onClick={onEgg}>输入彩蛋：CHEN</button>
         </div>
       </div>
     </RevealSection>
+  );
+}
+
+function TimelineSection() {
+  return (
+    <RevealSection className="timeline theme-transition-panel" id="timeline">
+      <div className="section-stack theme-enter-bottom theme-delay-2">
+        <div className="section-heading">
+          <p className="eyebrow">TIMELINE</p>
+          <h2>最近更新 / Project Log</h2>
+          <p className="section-note">把主页改动、学习状态和下一步想法整理成时间线。</p>
+        </div>
+
+        <div className="timeline-list">
+          {timelineItems.map((item) => (
+            <article className="timeline-item" key={`${item.date}-${item.title}`}>
+              <span>{item.date}</span>
+              <div>
+                <p>{item.label}</p>
+                <h3>{item.title}</h3>
+                <small>{item.desc}</small>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </RevealSection>
+  );
+}
+
+function FestivalSurprise({ festival, onActivateTheme }) {
+  const fallbackFestival = festivalRules[0];
+  const activeFestival = festival ?? fallbackFestival;
+
+  return (
+    <RevealSection className={festival ? 'festival-surprise theme-transition-panel is-active' : 'festival-surprise theme-transition-panel'} id="festival">
+      <div className="festival-card theme-enter-bottom theme-delay-1">
+        <div className="festival-orb" aria-hidden="true">
+          <span>{activeFestival.emoji}</span>
+          <i />
+          <i />
+          <i />
+        </div>
+        <div className="festival-copy">
+          <p className="eyebrow">AUTO FESTIVAL MODE</p>
+          <h2>{festival ? activeFestival.title : '节日彩蛋已自动待命'}</h2>
+          <p>{festival ? activeFestival.tone : `下一个内置节日彩蛋会在 ${fallbackFestival.month} 月 ${fallbackFestival.day} 日自动出现，不需要手动维护。`}</p>
+        </div>
+        <button className="button button-secondary" type="button" onClick={() => onActivateTheme(activeFestival.theme)}>
+          {festival ? '切换节日氛围' : '预览元旦氛围'}
+        </button>
+      </div>
+    </RevealSection>
+  );
+}
+
+function AutoChangelog() {
+  const [commits, setCommits] = useState([]);
+  const [status, setStatus] = useState('正在同步 GitHub 最近提交...');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch('/api/changelog')
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`更新日志请求失败：${response.status}`);
+        }
+
+        return response.json();
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setCommits(Array.isArray(data.commits) ? data.commits : []);
+        setStatus(`已同步 ${data.source ?? 'GitHub'} 最近提交`);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.warn(error);
+        setStatus('暂时无法同步 GitHub 更新日志');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <RevealSection className="auto-changelog theme-transition-panel" id="changelog">
+      <div className="section-stack theme-enter-bottom theme-delay-2">
+        <div className="section-heading">
+          <p className="eyebrow">AUTO CHANGELOG</p>
+          <h2>自动更新日志</h2>
+          <p className="section-note">直接读取 GitHub 最近提交，页面会随仓库更新自动刷新内容。</p>
+        </div>
+
+        <p className="changelog-status">{status}</p>
+        <div className="changelog-list">
+          {commits.length ? commits.map((commit) => (
+            <a className="changelog-item" key={commit.sha} href={commit.html_url} target="_blank" rel="noreferrer">
+              <span>{commit.shortSha}</span>
+              <div>
+                <strong>{commit.title}</strong>
+                <small>{commit.author} · {formatRelativeTime(commit.date)}</small>
+              </div>
+            </a>
+          )) : (
+            <article className="changelog-item is-empty">
+              <span>SYNC</span>
+              <div>
+                <strong>等待 GitHub 返回最近提交</strong>
+                <small>如果本地只启动 Vite，需要同时运行 npm run dev:api。</small>
+              </div>
+            </article>
+          )}
+        </div>
+      </div>
+    </RevealSection>
+  );
+}
+
+function WeatherSyncPanel({ onApplyTheme }) {
+  const [status, setStatus] = useState('等待定位授权，授权后会自动同步天气与日出日落。');
+  const [coords, setCoords] = useState(null);
+  const [weather, setWeather] = useState(null);
+  const [isWatching, setIsWatching] = useState(false);
+  const [isAutoThemeEnabled, setIsAutoThemeEnabled] = useState(true);
+  const watchIdRef = useRef(null);
+
+  const syncWeather = useCallback((position) => {
+    const nextCoords = {
+      latitude: Number(position.coords.latitude.toFixed(4)),
+      longitude: Number(position.coords.longitude.toFixed(4)),
+      accuracy: Math.round(position.coords.accuracy),
+      updatedAt: new Date().toISOString(),
+    };
+    setCoords(nextCoords);
+    setStatus('定位已更新，正在同步天气...');
+
+    const params = new URLSearchParams({
+      latitude: String(nextCoords.latitude),
+      longitude: String(nextCoords.longitude),
+      current: 'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m',
+      daily: 'sunrise,sunset',
+      timezone: 'auto',
+      forecast_days: '1',
+    });
+
+    fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`天气接口请求失败：${response.status}`);
+        }
+
+        return response.json();
+      })
+      .then((data) => {
+        const current = data.current ?? {};
+        const daily = data.daily ?? {};
+        const weatherCode = Number(current.weather_code ?? -1);
+        const [label, icon] = getWeatherLabel(weatherCode);
+        const sunrise = daily.sunrise?.[0];
+        const sunset = daily.sunset?.[0];
+        const phase = getSunPhase({ sunrise, sunset });
+        const nextWeather = {
+          label,
+          icon,
+          weatherCode,
+          phase,
+          temperature: Math.round(Number(current.temperature_2m ?? 0)),
+          apparent: Math.round(Number(current.apparent_temperature ?? 0)),
+          humidity: Math.round(Number(current.relative_humidity_2m ?? 0)),
+          wind: Math.round(Number(current.wind_speed_10m ?? 0)),
+          sunrise,
+          sunset,
+          timezone: data.timezone,
+          updatedAt: current.time ?? new Date().toISOString(),
+        };
+
+        setWeather(nextWeather);
+        setStatus(`天气已同步：${label} · ${nextWeather.temperature}°C`);
+
+        if (isAutoThemeEnabled) {
+          onApplyTheme(getThemeForWeatherPhase(weatherCode, phase));
+        }
+      })
+      .catch((error) => {
+        console.warn(error);
+        setStatus('天气同步失败，请稍后重试。');
+      });
+  }, [isAutoThemeEnabled, onApplyTheme]);
+
+  const startLocationWatch = useCallback(() => {
+    if (!navigator.geolocation) {
+      setStatus('当前浏览器不支持精准定位。');
+      return;
+    }
+
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+
+    setStatus('正在请求浏览器定位授权...');
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        setIsWatching(true);
+        syncWeather(position);
+      },
+      (error) => {
+        console.warn(error);
+        setIsWatching(false);
+        setStatus(error.code === error.PERMISSION_DENIED ? '定位授权被拒绝，无法获取精准天气。' : '定位失败，请检查浏览器或系统定位权限。');
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 5 * 60 * 1000,
+        timeout: 15 * 1000,
+      },
+    );
+    watchIdRef.current = watchId;
+  }, [syncWeather]);
+
+  const stopLocationWatch = useCallback(() => {
+    if (watchIdRef.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+    watchIdRef.current = null;
+    setIsWatching(false);
+    setStatus('已停止实时定位，天气信息会保留在当前结果。');
+  }, []);
+
+  useEffect(() => () => {
+    if (watchIdRef.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+  }, []);
+
+  return (
+    <RevealSection className="weather-sync theme-transition-panel" id="weather-sync">
+      <div className="section-stack theme-enter-bottom theme-delay-1">
+        <div className="section-heading">
+          <p className="eyebrow">LIVE WEATHER SYNC</p>
+          <h2>精准定位天气 / 日出日落主题</h2>
+          <p className="section-note">授权浏览器定位后，页面会实时获取经纬度天气，并按日出、白天、日落、夜晚自动调整氛围。</p>
+        </div>
+
+        <div className="weather-grid">
+          <article className="weather-main-card">
+            <div className="weather-icon" aria-hidden="true">{weather?.icon ?? '📍'}</div>
+            <div>
+              <span className="card-tag">{isWatching ? 'LIVE POSITION' : 'LOCATION READY'}</span>
+              <h3>{weather ? `${weather.label} · ${weather.temperature}°C` : '等待授权定位'}</h3>
+              <p>{status}</p>
+            </div>
+          </article>
+
+          <div className="weather-metrics">
+            <article>
+              <span>体感</span>
+              <strong>{weather ? `${weather.apparent}°C` : '--'}</strong>
+            </article>
+            <article>
+              <span>湿度</span>
+              <strong>{weather ? `${weather.humidity}%` : '--'}</strong>
+            </article>
+            <article>
+              <span>风速</span>
+              <strong>{weather ? `${weather.wind} km/h` : '--'}</strong>
+            </article>
+            <article>
+              <span>精度</span>
+              <strong>{coords ? `±${coords.accuracy}m` : '--'}</strong>
+            </article>
+          </div>
+        </div>
+
+        <div className="sun-cycle-grid">
+          <article>
+            <span>日出</span>
+            <strong>{weather ? formatClock(weather.sunrise) : '--:--'}</strong>
+          </article>
+          <article>
+            <span>日落</span>
+            <strong>{weather ? formatClock(weather.sunset) : '--:--'}</strong>
+          </article>
+          <article>
+            <span>当前时段</span>
+            <strong>{weather?.phase ?? '--'}</strong>
+          </article>
+          <article>
+            <span>经纬度</span>
+            <strong>{coords ? `${coords.latitude}, ${coords.longitude}` : '未授权'}</strong>
+          </article>
+        </div>
+
+        <div className="weather-actions">
+          <button className="button button-primary" type="button" onClick={startLocationWatch}>
+            {isWatching ? '重新同步定位' : '授权并实时同步'}
+          </button>
+          <button className="button button-secondary" type="button" onClick={stopLocationWatch} disabled={!isWatching}>
+            停止实时定位
+          </button>
+          <button className="button button-secondary" type="button" onClick={() => setIsAutoThemeEnabled((value) => !value)}>
+            {isAutoThemeEnabled ? '自动主题已开' : '自动主题已关'}
+          </button>
+        </div>
+      </div>
+    </RevealSection>
+  );
+}
+
+function EasterEggOverlay({ isVisible, onClose }) {
+  useEffect(() => {
+    if (!isVisible) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(onClose, 4200);
+    return () => window.clearTimeout(timeoutId);
+  }, [isVisible, onClose]);
+
+  if (!isVisible) {
+    return null;
+  }
+
+  return (
+    <div className="easter-egg-overlay" role="status" aria-live="polite">
+      <div className="easter-egg-core">
+        <span>✦</span>
+        <h2>隐藏信号已捕获</h2>
+        <p>你触发了 CHEN 彩蛋：主页进入短暂星轨加速模式。</p>
+      </div>
+    </div>
   );
 }
 
@@ -810,14 +1509,17 @@ function isEditableTarget(target) {
 }
 
 function CommandDeck({
+  activeTracks,
   achievements,
   activeTheme,
   customTheme,
   environmentKey,
-  isMusicPlaying,
+  isOpen,
+  musicState,
   isThemeMusicLinked,
   onClose,
   onLaunchRandom,
+  onPlaybackChange,
   onSetEnvironment,
   onSelectTheme,
   onSetCustomTheme,
@@ -829,18 +1531,29 @@ function CommandDeck({
   const radarTags = activeThemeData.tags.slice(0, 4);
   const unlockedAchievements = achievementList.filter((achievement) => achievements.includes(achievement.id));
   const activePreset = customThemePresets.find((preset) => preset.key === customTheme.preset) ?? customThemePresets[0];
+  const isMusicPlaying = musicState.isPlaying;
 
   useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, []);
+  }, [isOpen]);
 
   return (
-    <div className="command-deck" role="dialog" aria-modal="true" aria-label="主题指挥台">
+    <div
+      className={isOpen ? 'command-deck is-open' : 'command-deck'}
+      role={isOpen ? 'dialog' : undefined}
+      aria-modal={isOpen ? 'true' : undefined}
+      aria-hidden={!isOpen}
+      aria-label="主题指挥台"
+    >
       <button className="command-deck-backdrop" type="button" aria-label="关闭主题指挥台" onClick={onClose} />
 
       <section className="command-panel" aria-labelledby="command-deck-title">
@@ -870,8 +1583,8 @@ function CommandDeck({
                 </button>
               </article>
               <article>
-                <span>AUDIO HUD</span>
-                <strong>{isMusicPlaying ? '声波同步中' : '等待点火'}</strong>
+                <span>LATEST BADGE</span>
+                <strong>{unlockedAchievements.at(-1)?.title ?? '等待解锁'}</strong>
               </article>
             </div>
 
@@ -924,6 +1637,31 @@ function CommandDeck({
             );
           })}
         </div>
+
+        <section className="command-lab-card command-audio" aria-labelledby="command-audio-title">
+          <div className="command-lab-heading">
+            <span>AUDIO CONTROL</span>
+            <strong>{isMusicPlaying ? '声波同步中' : '待机'}</strong>
+          </div>
+          <h3 id="command-audio-title">音乐与 HUD 控制台</h3>
+          <p>播放器和声波 HUD 统一放在指挥台里，页面浏览时不再常驻浮窗。</p>
+          <div className="command-audio-grid">
+            <AudioVisualizerHud
+              activeTheme={activeTheme}
+              isPlaying={musicState.isPlaying}
+              track={musicState.track}
+              unlockedCount={achievements.length}
+              className="command-audio-hud"
+            />
+            <MusicPlayer
+              tracks={activeTracks}
+              className="command-music-player"
+              isThemeLinked={isThemeMusicLinked}
+              onPlaybackChange={onPlaybackChange}
+              onToggleThemeLinked={onToggleThemeMusic}
+            />
+          </div>
+        </section>
 
         <div className="command-lab-grid">
           <section className="command-lab-card command-achievements" aria-labelledby="achievement-title">
@@ -1015,11 +1753,12 @@ function CommandDeck({
   );
 }
 
-function AudioVisualizerHud({ activeTheme, isPlaying, track, unlockedCount }) {
+function AudioVisualizerHud({ activeTheme, isPlaying, track, unlockedCount, className = '' }) {
   const activeThemeLabel = themes[activeTheme]?.modeLabel ?? '默认主页';
+  const hudClassName = `${isPlaying ? 'audio-hud is-active' : 'audio-hud'} ${className}`.trim();
 
   return (
-    <aside className={isPlaying ? 'audio-hud is-active' : 'audio-hud'} aria-live="polite">
+    <aside className={hudClassName} aria-live="polite">
       <div className="audio-hud-orb" aria-hidden="true">
         <span />
         <span />
@@ -1039,25 +1778,6 @@ function AudioVisualizerHud({ activeTheme, isPlaying, track, unlockedCount }) {
         <span />
       </div>
     </aside>
-  );
-}
-
-function AchievementToast({ achievementId }) {
-  const achievement = achievementMap[achievementId];
-
-  if (!achievement) {
-    return null;
-  }
-
-  return (
-    <div className="achievement-toast" role="status" aria-live="polite" key={achievement.id}>
-      <span>{achievement.icon}</span>
-      <div>
-        <p>成就解锁</p>
-        <strong>{achievement.title}</strong>
-        <small>{achievement.desc}</small>
-      </div>
-    </div>
   );
 }
 
@@ -1104,16 +1824,17 @@ function useDeferredHeroCharacter(isEnabled) {
 }
 
 function App() {
-  const [activeTheme, setActiveTheme] = useState('default');
+  const [activeTheme, setActiveTheme] = useState(() => readStorageValue(storageKeys.theme, getTimeBasedTheme()));
   const [isThemeMusicLinked, setIsThemeMusicLinked] = useState(true);
   const [isCommandDeckOpen, setIsCommandDeckOpen] = useState(false);
   const [musicState, setMusicState] = useState({ isPlaying: false, track: null });
   const [isBootVisible, setIsBootVisible] = useState(() => !readStorageValue(storageKeys.bootSeen, false));
   const [activeBriefingKey, setActiveBriefingKey] = useState(null);
+  const [isEggVisible, setIsEggVisible] = useState(false);
   const briefedThemeRef = useRef(null);
+  const eggSequenceRef = useRef('');
   const [environmentKey, setEnvironmentKey] = useState(() => readStorageValue(storageKeys.environment, 'nebula'));
   const [achievements, setAchievements] = useState(() => readStorageValue(storageKeys.achievements, []));
-  const [latestAchievementId, setLatestAchievementId] = useState(null);
   const [visitedThemes, setVisitedThemes] = useState(() => readStorageValue(storageKeys.visitedThemes, ['default']));
   const [visitedEnvironments, setVisitedEnvironments] = useState(() => readStorageValue(storageKeys.visitedEnvironments, [environmentKey]));
   const [visitedPresets, setVisitedPresets] = useState(() => readStorageValue(storageKeys.visitedPresets, []));
@@ -1123,6 +1844,7 @@ function App() {
   }));
   const [activeIntroKey, setActiveIntroKey] = useState(null);
   const theme = themes[activeTheme];
+  const todayFestival = useMemo(() => getTodayFestival(), []);
   const themeMetrics = themeMetricsMap[activeTheme] ?? themeMetricsMap.default;
   const shouldRenderHeroCharacter = useDeferredHeroCharacter(activeTheme === 'default');
   const unlockAchievement = useCallback((achievementId) => {
@@ -1137,7 +1859,6 @@ function App() {
 
       return [...currentAchievements, achievementId];
     });
-    setLatestAchievementId(achievementId);
   }, [achievements]);
   const openCommandDeck = useCallback(() => {
     setIsCommandDeckOpen(true);
@@ -1214,6 +1935,19 @@ function App() {
     ));
     unlockAchievement('environment_shift');
   }, [unlockAchievement]);
+  const applyWeatherTheme = useCallback(({ theme: nextTheme, environment }) => {
+    if (nextTheme && themes[nextTheme] && nextTheme !== activeTheme) {
+      selectTheme(nextTheme);
+    }
+    if (environment && environment !== environmentKey) {
+      setEnvironment(environment);
+    }
+  }, [activeTheme, environmentKey, selectTheme, setEnvironment]);
+  const triggerEasterEgg = useCallback(() => {
+    setIsEggVisible(true);
+    setEnvironment('nebula');
+  }, [setEnvironment]);
+  const closeEasterEgg = useCallback(() => setIsEggVisible(false), []);
   const currentYear = useMemo(() => new Date().getFullYear(), []);
   const activeCustomPreset = useMemo(
     () => customThemePresets.find((preset) => preset.key === customTheme.preset) ?? customThemePresets[0],
@@ -1262,13 +1996,8 @@ function App() {
   );
 
   useEffect(() => {
-    if (!latestAchievementId) {
-      return undefined;
-    }
-
-    const timeoutId = window.setTimeout(() => setLatestAchievementId(null), 3200);
-    return () => window.clearTimeout(timeoutId);
-  }, [latestAchievementId]);
+    writeStorageValue(storageKeys.theme, activeTheme);
+  }, [activeTheme]);
 
   useEffect(() => {
     writeStorageValue(storageKeys.achievements, achievements);
@@ -1373,6 +2102,14 @@ function App() {
       }
 
       if (!isCommandDeckOpen) {
+        if (/^[a-z]$/.test(key)) {
+          eggSequenceRef.current = `${eggSequenceRef.current}${key}`.slice(-4);
+          if (eggSequenceRef.current === 'chen') {
+            triggerEasterEgg();
+            eggSequenceRef.current = '';
+          }
+        }
+
         return;
       }
 
@@ -1396,7 +2133,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [closeCommandDeck, isCommandDeckOpen, launchRandomTheme, selectTheme, unlockAchievement]);
+  }, [closeCommandDeck, isCommandDeckOpen, launchRandomTheme, selectTheme, triggerEasterEgg, unlockAchievement]);
 
   useEffect(() => {
     if (isCommandDeckOpen) {
@@ -1469,10 +2206,10 @@ function App() {
               type="button"
               onClick={openCommandDeck}
               aria-label="打开主题指挥台"
-              title="Ctrl / ⌘ + K 打开主题指挥台"
+              title="Ctrl / ⌘ + K 打开主题指挥台，音乐和 HUD 已收纳在这里"
             >
               <span className="command-launcher-core">⌘K</span>
-              <span>指挥台</span>
+              <span>{musicState.isPlaying ? '音乐控制台' : '指挥台'}</span>
             </button>
           </div>
 
@@ -1544,6 +2281,16 @@ function App() {
             </div>
           </RevealSection>
 
+          <FestivalSurprise festival={todayFestival} onActivateTheme={selectTheme} />
+
+          <WeatherSyncPanel onApplyTheme={applyWeatherTheme} />
+
+          <VisitorPulse onEgg={triggerEasterEgg} />
+
+          <TimelineSection />
+
+          <AutoChangelog />
+
           <RevealSection className="story theme-transition-panel" id="about">
             <div className="section-stack theme-enter-bottom theme-delay-1">
               <div className="section-heading">
@@ -1605,22 +2352,7 @@ function App() {
         </footer>
       </div>
 
-      <MusicPlayer
-        tracks={activeTracks}
-        className="music-dock"
-        isThemeLinked={isThemeMusicLinked}
-        onPlaybackChange={handlePlaybackChange}
-        onToggleThemeLinked={toggleThemeMusicLinked}
-      />
-
-      <AudioVisualizerHud
-        activeTheme={activeTheme}
-        isPlaying={musicState.isPlaying}
-        track={musicState.track}
-        unlockedCount={achievements.length}
-      />
-
-      <AchievementToast achievementId={latestAchievementId} />
+      <EasterEggOverlay isVisible={isEggVisible} onClose={closeEasterEgg} />
 
       {isBootVisible ? <BootLoader onComplete={completeBoot} /> : null}
 
@@ -1628,23 +2360,24 @@ function App() {
         <MissionBriefing themeKey={activeBriefingKey} onClose={closeMissionBriefing} />
       ) : null}
 
-      {isCommandDeckOpen ? (
-        <CommandDeck
-          achievements={achievements}
-          activeTheme={activeTheme}
-          customTheme={customTheme}
-          environmentKey={environmentKey}
-          isMusicPlaying={musicState.isPlaying}
-          isThemeMusicLinked={isThemeMusicLinked}
-          onClose={closeCommandDeck}
-          onLaunchRandom={launchRandomTheme}
-          onSetEnvironment={setEnvironment}
-          onSelectTheme={selectTheme}
-          onSetCustomTheme={setCustomThemePatch}
-          onToggleCustomTheme={toggleCustomTheme}
-          onToggleThemeMusic={toggleThemeMusicLinked}
-        />
-      ) : null}
+      <CommandDeck
+        activeTracks={activeTracks}
+        achievements={achievements}
+        activeTheme={activeTheme}
+        customTheme={customTheme}
+        environmentKey={environmentKey}
+        isOpen={isCommandDeckOpen}
+        musicState={musicState}
+        isThemeMusicLinked={isThemeMusicLinked}
+        onClose={closeCommandDeck}
+        onLaunchRandom={launchRandomTheme}
+        onPlaybackChange={handlePlaybackChange}
+        onSetEnvironment={setEnvironment}
+        onSelectTheme={selectTheme}
+        onSetCustomTheme={setCustomThemePatch}
+        onToggleCustomTheme={toggleCustomTheme}
+        onToggleThemeMusic={toggleThemeMusicLinked}
+      />
 
       {activeIntroKey && themeIntroMap[activeIntroKey] ? (
         <ThemeIntroOverlay

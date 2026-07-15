@@ -11,10 +11,24 @@
 
 ## 本地开发
 
+只看前端页面：
+
 ```bash
 npm install
 npm run dev
 ```
+
+如果要在本地使用 `/api/guestbook` 和 `/api/site-stats`，需要开两个 PowerShell 7 终端：
+
+```bash
+# 终端 1：启动本地 API，自动读取 .env.local
+npm run dev:api
+
+# 终端 2：启动 Vite 前端，/api 会代理到本地 API
+npm run dev
+```
+
+然后访问 Vite 输出的地址，例如 `http://127.0.0.1:5173/`。页面里的 `fetch('/api/...')` 会被 Vite 代理到 `http://127.0.0.1:8787/api/...`。
 
 ## 常用命令
 
@@ -27,7 +41,7 @@ npm run preview  # 预览生产构建
 ## 目录说明
 
 - `src/App.jsx`：主页主题数据、主题切换、入场视频与页面主体结构。
-- `src/components/MusicPlayer.jsx`：独立音乐播放器，支持主题联动与自由播放模式。
+- `src/components/MusicPlayer.jsx`：独立音乐播放器，支持主题联动、自由播放、播放列表与音量记忆。
 - `src/components/HeroCharacter.jsx`：默认主页的 3D 人物展示模块。
 - `src/components/AbstractVisuals.jsx`：数据环、标签云、状态点等抽象视觉组件。
 - `src/styles/main.less`：全站样式与多主题视觉变量。
@@ -57,19 +71,27 @@ npm run preview  # 预览生产构建
 
 - **页面启动 Boot Loader**：首次进入页面会显示游戏启动器式加载界面，之后通过 `localStorage` 记住已看过。
 - **主题任务简报**：每次切换主题都会展示对应的任务简报卡，按 `Esc` 或点击按钮关闭。
-- **鼠标粒子拖尾**：鼠标移动时会产生主题色粒子，音乐播放时粒子更活跃。
-- **访客留言墙**：留言会通过 Vercel Serverless API 直接写入 GitHub Issues，页面会读取 `chenliwen123/chenliwen123` 中带 `homepage-message` 标签的公开 Issue。
+- **鼠标粒子拖尾与星空背景**：鼠标移动时会产生主题色粒子，音乐播放时粒子和星光更活跃。
+- **访客留言墙**：留言会通过 Vercel Serverless API 直接写入 GitHub Issues，页面会读取 `chenliwen123/chenliwen123` 中带 `homepage-message` 标签的公开 Issue，并支持成功弹窗、加载更多、相对时间、头像、置顶和本地防刷。
+- **访客计数与点赞**：`api/site-stats.js` 会把总访问、今日访问和点赞数同步到 GitHub Issues 中的隐藏统计 Issue。
+- **今日状态与时间线**：主页展示当前状态、最近更新和后续 Roadmap。
+- **自动节日彩蛋**：按北京时间自动匹配节日日期，显示节日氛围卡和主题预览入口。
+- **精准天气同步**：访客授权浏览器定位后，页面会用 Open-Meteo 获取实时天气、日出和日落，并按天气/昼夜自动切换主题氛围。
+- **自动更新日志**：`api/changelog.js` 会读取 GitHub 最近提交，主页自动展示仓库更新。
+- **隐藏彩蛋**：页面非输入框状态下键入 `CHEN`，会触发星轨彩蛋动画。
 
-## Vercel 留言接口
+## Vercel 接口
 
-页面内直接留言依赖 `api/guestbook.js`，需要在 Vercel 项目里配置环境变量：
+页面内留言、统计和更新日志依赖 `api/guestbook.js`、`api/site-stats.js`、`api/changelog.js`，需要在 Vercel 项目里配置环境变量：
 
 - `GITHUB_TOKEN`：GitHub Fine-grained token，至少需要目标仓库 Issues 的读写权限。
 - `GITHUB_OWNER`：可选，默认 `chenliwen123`。
 - `GITHUB_REPO`：可选，默认 `chenliwen123`。
 - `GITHUB_GUESTBOOK_LABEL`：可选，默认 `homepage-message`。
 
-推荐创建 Fine-grained token，只授权 `chenliwen123/chenliwen123` 一个仓库，并开启 `Issues: Read and write`。接口会自动创建 `homepage-message` 标签；如果 token 权限不足，也可以手动在仓库里创建该标签。
+推荐创建 Fine-grained token，只授权 `chenliwen123/chenliwen123` 一个仓库，并开启 `Issues: Read and write`。接口会自动创建 `homepage-message` 和 `homepage-stats` 标签；如果 token 权限不足，也可以手动在仓库里创建对应标签。
+
+天气同步不需要服务端密钥。浏览器定位只在访客本机授权后使用，经纬度会直接请求 Open-Meteo，不会写入 GitHub Issues 或项目后端。
 
 ## 音乐资源
 
@@ -98,3 +120,4 @@ npm run preview  # 预览生产构建
 ## 性能说明
 
 默认主页的 3D 人物模块体积较大，项目会在浏览器空闲后再加载它，并在用户开启省流量或减少动态效果时保留轻量介绍卡片，避免拖慢首屏显示。
+

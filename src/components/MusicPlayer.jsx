@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PulseStatus } from './AbstractVisuals';
 
+const volumeStorageKey = 'chenliwen-music-volume-v1';
+
+function readVolumePreference() {
+  if (typeof window === 'undefined') {
+    return 0.72;
+  }
+
+  const storedVolume = Number(window.localStorage.getItem(volumeStorageKey));
+  return Number.isFinite(storedVolume) ? Math.max(0, Math.min(1, storedVolume)) : 0.72;
+}
+
 function formatTrackLabel(track, index, total) {
   return `${String(index + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')} · ${track.subtitle}`;
 }
@@ -60,6 +71,7 @@ export default function MusicPlayer({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [volume, setVolume] = useState(readVolumePreference);
   const [status, setStatus] = useState('点击按钮开启页面音乐');
 
   useEffect(() => {
@@ -104,7 +116,10 @@ export default function MusicPlayer({
       setIsPlaying(false);
       onPlaybackChange?.({ isPlaying: false, track: currentTrack });
     };
-    const onVolumeChange = () => setIsMuted(audio.muted);
+    const onVolumeChange = () => {
+      setIsMuted(audio.muted);
+      setVolume(audio.volume);
+    };
 
     audio.addEventListener('ended', onEnded);
     audio.addEventListener('play', onPlay);
@@ -153,6 +168,16 @@ export default function MusicPlayer({
     }
   }, [currentTrack, isMuted]);
 
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.volume = volume;
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(volumeStorageKey, String(volume));
+    }
+  }, [currentTrack, volume]);
+
   const changeTrack = (direction) => {
     if (!canChangeTrack) return;
 
@@ -184,6 +209,15 @@ export default function MusicPlayer({
     if (!audio) return;
     audio.muted = !audio.muted;
     setStatus(audio.muted ? '已静音播放' : '已恢复声音');
+  };
+
+  const changeVolume = (event) => {
+    const nextVolume = Number(event.target.value) / 100;
+    setVolume(nextVolume);
+    if (nextVolume > 0 && isMuted) {
+      setIsMuted(false);
+    }
+    setStatus(`音量已调整到 ${Math.round(nextVolume * 100)}%`);
   };
 
   const toggleCollapsed = () => {
@@ -298,6 +332,28 @@ export default function MusicPlayer({
               >
                 <ControlIcon name={isMuted ? 'muted' : 'volume'} />
               </button>
+            </div>
+
+            <label className="music-volume-control">
+              <span>音量 {Math.round(volume * 100)}%</span>
+              <input type="range" min="0" max="100" value={Math.round(volume * 100)} onChange={changeVolume} />
+            </label>
+
+            <div className="music-playlist" aria-label="播放列表">
+              {tracks.map((track, index) => (
+                <button
+                  key={track.id}
+                  className={track.id === currentTrack.id ? 'music-playlist-item is-active' : 'music-playlist-item'}
+                  type="button"
+                  onClick={() => {
+                    setCurrentTrackId(track.id);
+                    setStatus(`已选择：${track.title}`);
+                  }}
+                >
+                  <span>{String(index + 1).padStart(2, '0')}</span>
+                  <strong>{track.title}</strong>
+                </button>
+              ))}
             </div>
           </div>
         </>
