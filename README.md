@@ -11,24 +11,14 @@
 
 ## 本地开发
 
-只看前端页面：
+前任聊天不依赖 Vite 代理。先把 `.env.example` 复制为 `.env.local`，填写 `OPENAI_API_KEY`，然后运行：
 
 ```bash
 npm install
 npm run dev
 ```
 
-如果要在本地使用 `/api/guestbook` 和 `/api/site-stats`，需要开两个 PowerShell 7 终端：
-
-```bash
-# 终端 1：启动本地 API，自动读取 .env.local
-npm run dev:api
-
-# 终端 2：启动 Vite 前端，/api 会代理到本地 API
-npm run dev
-```
-
-然后访问 Vite 输出的地址，例如 `http://127.0.0.1:5173/`。页面里的 `fetch('/api/...')` 会被 Vite 代理到 `http://127.0.0.1:8787/api/...`。
+Vite 不配置任何 `proxy`。开发时，`/api/ex-chat` 由 Vite 中间件直接处理，因此只需要运行一个 `npm run dev`；留言、站点统计和更新日志仍需要实际部署平台提供对应的 `/api/*`。
 
 ## 常用命令
 
@@ -42,12 +32,38 @@ npm run preview  # 预览生产构建
 
 - `src/App.jsx`：主页主题数据、主题切换、入场视频与页面主体结构。
 - `src/components/MusicPlayer.jsx`：独立音乐播放器，支持主题联动、自由播放、播放列表与音量记忆。
+- `src/components/ExChatWidget.jsx`：前任聊天窗口、完整聊天记录和长期记忆的本地持久化。
 - `src/components/HeroCharacter.jsx`：默认主页的 3D 人物展示模块。
 - `src/components/AbstractVisuals.jsx`：数据环、标签云、状态点等抽象视觉组件。
 - `src/styles/main.less`：全站样式与多主题视觉变量。
 - `public/audio/`：各主题的本地音频资源，以静态文件方式提供，不进入 JS 打包。
 - `public/models/`：3D 模型资源。
 - `public/theme-intros/`：可选主题入场视频资源。
+- `public/ex-persona.md`：前任人物档案，可直接修改基础信息、性格、共同回忆和说话方式。
+
+## 前任聊天与记忆
+
+- 人物档案从 `public/ex-persona.md` 加载；文件读取失败时，组件会使用内置的默认档案。
+- 服务端会从人物档案各分区摘取关键条目组成紧凑提示，避免兼容接口因长提示迟迟不返回；修改姓名、性格、关系、共同回忆和说话方式仍会生效。
+- 每条用户和助手消息都会保存到浏览器 `localStorage`，刷新页面或下次打开时会恢复完整记录。
+- 模型每轮会返回一组精简的长期记忆，保存用户明确表达的称呼、喜好、近况、共同约定和关系边界。
+- 请求模型时只携带长期记忆和最近 12 条消息，完整记录仍保留在本地，避免上下文随着聊天无限增长或触发兼容接口超时。
+- 点击聊天窗口右上角的清空按钮，会同时删除完整聊天记录和长期记忆。
+- 当前持久化只作用于同一浏览器和同一域名，不会自动跨设备同步。
+
+浏览器只请求同源 `/api/ex-chat`，再由服务端连接 DeepSeek/OpenAI 兼容接口。它不是 Vite 代理，也不会把 API Key 放进前端构建。需要在 `.env.local` 中配置：
+
+- `OPENAI_API_KEY`：必填，聊天模型 API 密钥。
+- `OPENAI_MODEL`：可选，默认 `deepseek-v4-flash`。
+- `OPENAI_BASE_URL`：可选，默认 `https://api.deepseek.com`，也可填写 Chat Completions 兼容地址。
+- `OPENAI_PROXY_URL`：可选，服务端访问模型时使用的 HTTP/HTTPS CONNECT 代理，例如 `http://127.0.0.1:7890`。适用于浏览器或 PowerShell 能访问模型、但 Node 直连失败的本地网络环境。
+- `OPENAI_ALLOW_INSECURE_TLS`：可选，默认 `false`。仅当自签名代理由你控制且完全可信时设为 `true`；它会在正常证书校验失败后关闭校验重试，正式环境优先更换为有效 HTTPS 证书。
+
+如果使用的本地代理会在约 15 秒没有收到上游数据时断开连接，优先选择响应更快的轻量模型；当前本机配置使用 `gpt-5.4-mini`。代理链路遇到连接复位或超时时，服务端会自动重试一次。
+
+为了兼容已有配置，开发接口也能读取旧的 `VITE_OPENAI_*` 变量，但建议迁移到不暴露给浏览器的 `OPENAI_*` 变量。修改 `.env.local` 后需要重新启动 `npm run dev`。
+
+如果本机 DNS 把 `api.deepseek.com` 解析到不可达节点，聊天服务会组合可信 DNS 和已验证的 DeepSeek CDN 候选节点，逐个发起保持 Host/SNI 与证书校验的请求，并短期缓存成功节点，不需要修改系统 DNS。
 
 ## 主题指挥台
 

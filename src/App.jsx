@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import MusicPlayer from './components/MusicPlayer';
 import RevealSection from './components/RevealSection';
 import { DataRing, GeoIndicator, ModeVisual, FloatingTagCloud } from './components/AbstractVisuals';
+import ExChatWidget from './components/ExChatWidget';
 
 const HeroCharacter = lazy(() => import('./components/HeroCharacter'));
 
@@ -2385,6 +2386,8 @@ function App() {
           onClose={closeThemeIntro}
         />
       ) : null}
+
+      <ExChatWidget activeTheme={activeTheme} />
     </div>
   );
 }
